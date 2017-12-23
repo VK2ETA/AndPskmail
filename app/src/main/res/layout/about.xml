@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+	android:orientation="vertical" android:layout_width="fill_parent"
+	android:layout_height="fill_parent" android:weightSum="1">
+	<ScrollView android:id="@+id/terminalscrollview"
+		android:layout_width="fill_parent" android:layout_height="wrap_content"
+		android:layout_weight="1.00">
+		<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+			android:orientation="vertical" android:layout_width="fill_parent"
+			android:layout_height="fill_parent" android:weightSum="1">
+
+			<TextView xmlns:android="http://schemas.android.com/apk/res/android"
+				android:layout_width="fill_parent" android:layout_height="wrap_content"
+				android:textSize="18sp" android:padding="5dp"
+				android:text="                AndPskmail\n
+        by John Douyere (VK2ETA)" />
+			<TextView xmlns:android="http://schemas.android.com/apk/res/android"
+				android:id="@+id/versiontextview" android:layout_width="fill_parent" android:layout_height="wrap_content"
+				android:textSize="18sp" android:padding="5dp" android:layout_weight="0.13"/>
+			<TextView xmlns:android="http://schemas.android.com/apk/res/android"
+				android:layout_width="fill_parent" android:layout_height="wrap_content"
+				android:textSize="18sp" android:padding="5dp"
+				android:text="
+    
+    Open source software under GNU licence.\n     Based on jPskmail by Rein Couperus (PA0R) and Per Crusefalk (SM0RWO) and on Fldigi by David (Dave) Freese (W1HKJ)
+     
+This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
+ 
+ " />
+			<LinearLayout android:id="@+id/FrameLayout2"
+				android:layout_width="fill_parent" android:layout_height="wrap_content"
+				android:layout_weight="0.08" android:weightSum="1">
+				<Button android:id="@+id/button_returntoterminal"
+					android:layout_height="fill_parent" android:text="Return To Terminal"
+					android:layout_width="57dp" android:layout_weight="0.08"></Button>
+			</LinearLayout>
+		</LinearLayout>
+	</ScrollView>
+</LinearLayout>
+
+

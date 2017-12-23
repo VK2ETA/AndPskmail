@@ -1,0 +1,429 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android" >
+
+    <EditTextPreference
+        android:defaultValue="NOCAL"
+        android:key="SERVER"
+        android:summary="Server Callsign"
+        android:title="Server Callsign" >
+    </EditTextPreference>
+
+    <ListPreference
+        android:entries="@array/modes"
+        android:entryValues="@array/mode_values"
+        android:key="TXMODE"
+        android:summary="Initial TX Mode"
+        android:title="TX Mode" android:defaultValue="5">
+    </ListPreference>
+
+    <ListPreference
+        android:entries="@array/modes"
+        android:entryValues="@array/mode_values"
+        android:key="RXMODE"
+        android:summary="Initial Rx Mode"
+        android:title="Rx Mode" android:defaultValue="5">
+    </ListPreference>
+
+    <CheckBoxPreference
+        android:key="CONNECTWITHMODELIST"
+        android:summary="Use custom list of modes"
+        android:title="Use custom list of modes" android:defaultValue="true">
+    </CheckBoxPreference>
+
+    <PreferenceScreen
+        android:key="modelistPS"
+        android:title="Mode List" >
+
+        <CheckBoxPreference
+            android:key="USEPSK500"
+            android:title="Use PSK500" android:defaultValue="false">
+        </CheckBoxPreference>
+
+        <CheckBoxPreference
+            android:key="USEPSK250"
+            android:title="Use PSK250" android:defaultValue="true">
+        </CheckBoxPreference>
+
+        <CheckBoxPreference
+            android:key="USEPSK500R"
+            android:title="Use PSK500R" android:defaultValue="false">
+        </CheckBoxPreference>
+
+        <CheckBoxPreference
+            android:key="USEPSK125"
+            android:title="Use PSK125" android:defaultValue="false">
+        </CheckBoxPreference>
+
+        <CheckBoxPreference
+            android:key="USEPSK250R"
+            android:title="Use PSK250R" android:defaultValue="true">
+        </CheckBoxPreference>
+
+        <CheckBoxPreference
+            android:key="USEPSK63"
+            android:title="Use PSK63" android:defaultValue="false">
+        </CheckBoxPreference>
+
+        <CheckBoxPreference
+            android:key="USEPSK125R"
+            android:title="Use PSK125R" android:defaultValue="false">
+        </CheckBoxPreference>
+
+        <CheckBoxPreference
+            android:key="USEMFSK32"
+            android:title="Use MFSK32" android:defaultValue="true"/>
+
+        <CheckBoxPreference
+            android:key="USETHOR22"
+            android:title="Use THOR22" android:defaultValue="true"/>
+
+        <CheckBoxPreference
+            android:key="USETHOR11"
+            android:title="Use THOR11" android:defaultValue="true"/>
+
+        <CheckBoxPreference
+            android:key="USEMFSK16"
+            android:title="Use MFSK16" android:defaultValue="false"/>
+
+        <CheckBoxPreference
+            android:key="USETHOR8"
+            android:title="Use THOR8" android:defaultValue="false"/>
+    </PreferenceScreen>
+
+    <PreferenceScreen
+        android:key="modemPS"
+        android:title="MODEM" >
+
+        <ListPreference
+            android:entries="@array/volume"
+            android:entryValues="@array/volume_values"
+            android:key="VOLUME"
+            android:summary="Modem Volume"
+            android:title="Modem Volume" android:defaultValue="10">
+        </ListPreference>
+
+        <EditTextPreference
+            android:key="AFREQUENCY"
+            android:summary="Centre Frequency"
+            android:title="Audio Frequency" android:defaultValue="1000"
+            android:inputType="number">
+        </EditTextPreference>
+
+        <CheckBoxPreference
+            android:key="SLOWCPU"
+            android:title="SLOW CPU"
+            android:summary="Save CPU resources" android:defaultValue="false"/>
+
+        <EditTextPreference
+            android:key="TXDELAY"
+            android:summary="Delay (Milli Seconds) before TX"
+            android:title="TX Delay"
+            android:inputType="number" android:defaultValue="1800">
+        </EditTextPreference>
+
+        <EditTextPreference
+            android:key="DCD"
+            android:summary="0 to 5 Seconds"
+            android:title="Busy Detect Time" android:defaultValue="0"
+            android:inputType="number">
+        </EditTextPreference>
+
+        <EditTextPreference
+            android:key="TUNELENGTH"
+            android:summary="0 to 60 seconds (0 = Toggle)"
+            android:title="Tune length in Seconds"
+            android:defaultValue="3"
+            android:inputType="number">
+        </EditTextPreference>
+
+         <ListPreference
+            android:entries="@array/modesext"
+            android:entryValues="@array/modeext_values"
+            android:key="BLOCKLENGTH"
+            android:summary="Block Length"
+            android:title="Block Length" android:enabled="false" android:selectable="false">
+        </ListPreference>
+
+    </PreferenceScreen>
+
+    <PreferenceScreen
+        android:key="aprsPS"
+        android:title="APRS" >
+
+        <EditTextPreference
+            android:key="STATUS"
+            android:summary="APRS beacon default status"
+            android:title="Beacon Status" >
+        </EditTextPreference>
+
+        <ListPreference
+            android:entries="@array/period"
+            android:entryValues="@array/period_values"
+            android:key="BEACONPERIOD"
+            android:summary="In  Minutes"
+            android:title="Beacons Period" android:defaultValue="30"/>
+
+        <ListPreference
+            android:entries="@array/minutes"
+            android:entryValues="@array/minutes_values"
+            android:key="BEACONQRG"
+            android:summary="Minute (0 to4) for TXing Beacon"
+            android:title="Beacon QRG" android:defaultValue="0">
+        </ListPreference>
+
+        <ListPreference
+            android:entries="@array/seconds"
+            android:entryValues="@array/seconds_values"
+            android:key="BEACONSECONDS"
+            android:title="Delay in Seconds (in the minute)" android:defaultValue="10"/>
+
+        <CheckBoxPreference
+            android:key="CBEACON"
+            android:summary="Compressed Beacons"
+            android:title="Compressed Beacons" android:defaultValue="true">
+        </CheckBoxPreference>
+
+        <EditTextPreference
+            android:key="ICON"
+            android:summary="Icon used for Beacons"
+            android:title="APRS Icon" android:defaultValue=".">
+        </EditTextPreference>
+    </PreferenceScreen>
+
+    <PreferenceScreen
+        android:key="dataexchangePS"
+        android:title="Data Exchange" >
+
+        <CheckBoxPreference
+            android:key="COMPRESSED"
+            android:summary="Compressed Data Exchange"
+            android:title="Compressed Data Exchange" android:defaultValue="true">
+        </CheckBoxPreference>
+
+        <ListPreference
+            android:defaultValue="Accept"
+            android:entries="@array/resume"
+            android:entryValues="@array/resume_values"
+            android:key="RESUME"
+            android:summary="Uploads and Downloads"
+            android:title="Resume" >
+        </ListPreference>
+    </PreferenceScreen>
+
+    <PreferenceScreen
+        android:key="webpagesPS"
+        android:summary="See Info Screen"
+        android:title="Web Pages" >
+
+        <EditTextPreference
+            android:key="URL1"
+            android:title="URL 1" >
+        </EditTextPreference>
+
+        <EditTextPreference
+            android:key="URL1B"
+            android:summary="(optional)"
+            android:title="URL 1 Begin at" >
+        </EditTextPreference>
+
+        <EditTextPreference
+            android:key="URL1E"
+            android:summary="(optional)"
+            android:title="URL 1 End at" >
+        </EditTextPreference>
+
+        <EditTextPreference
+            android:key="URL2"
+            android:title="URL 2" >
+        </EditTextPreference>
+
+        <EditTextPreference
+            android:key="URL2B"
+            android:summary="(optional)"
+            android:title="URL 2 Begin at" >
+        </EditTextPreference>
+
+        <EditTextPreference
+            android:key="URL2E"
+            android:summary="(optional)"
+            android:title="URL 2 End at" >
+        </EditTextPreference>
+
+        <EditTextPreference
+            android:key="URL3"
+            android:title="URL 3" >
+        </EditTextPreference>
+
+        <EditTextPreference
+            android:key="URL3B"
+            android:summary="(optional)"
+            android:title="URL 3 Begin at" >
+        </EditTextPreference>
+
+        <EditTextPreference
+            android:key="URL3E"
+            android:summary="(optional)"
+            android:title="URL 3 End at" >
+        </EditTextPreference>
+
+        <EditTextPreference
+            android:key="URL4"
+            android:title="URL 4" >
+        </EditTextPreference>
+
+        <EditTextPreference
+            android:key="URL4B"
+            android:summary="(optional)"
+            android:title="URL 4 Begin at" >
+        </EditTextPreference>
+
+        <EditTextPreference
+            android:key="URL4E"
+            android:summary="(optional)"
+            android:title="URL 4 End at" >
+        </EditTextPreference>
+
+        <EditTextPreference
+            android:key="URL5"
+            android:title="URL 5" >
+        </EditTextPreference>
+
+        <EditTextPreference
+            android:key="URL5B"
+            android:summary="(optional)"
+            android:title="URL 5 Begin at" >
+        </EditTextPreference>
+
+        <EditTextPreference
+            android:key="URL5E"
+            android:summary="(optional)"
+            android:title="URL 5 End at" >
+        </EditTextPreference>
+
+        <EditTextPreference
+            android:key="URL6"
+            android:title="URL 6" >
+        </EditTextPreference>
+
+        <EditTextPreference
+            android:key="URL6B"
+            android:summary="(optional)"
+            android:title="URL 6 Begin at" >
+        </EditTextPreference>
+
+        <EditTextPreference
+            android:key="URL6E"
+            android:summary="(optional)"
+            android:title="URL 6 End at" >
+        </EditTextPreference>
+    </PreferenceScreen>
+
+    <PreferenceScreen
+        android:key="GribPS"
+        android:summary="See http://weather.mailasail.com/Franks-Weather/Saildocs-Free-Grib-Files"
+        android:title="Grib Weather Data" >
+        <EditTextPreference
+            android:key="GRIBSQUARE"
+            android:title="Grib Square Extension"
+            android:summary="Default=1 meaning +1 and -1 Degrees from your current position"
+            android:defaultValue="1">
+        </EditTextPreference>
+        <ListPreference
+            android:entries="@array/gribdata"
+            android:entryValues="@array/gribdata_values"
+            android:key="GRIBDATA"
+            android:summary="Select what data is requested"
+            android:title="Grib Data Request"/>
+        <EditTextPreference
+            android:key="CUSTOMGRIBREQUEST1"
+            android:title="Grib Custom Data Request 1"
+            android:summary="Optional section (right after the coordinates)"
+            android:defaultValue="|2,2|0,6,...,72|WIND,PRESS,WAVES,CAPE">
+        </EditTextPreference>
+        <EditTextPreference
+            android:key="CUSTOMGRIBREQUEST2"
+            android:title="Grib Custom Data Request 2"
+            android:summary="Optional section (right after the coordinates)"
+            android:defaultValue="|2,2|0,6,...,96|WIND,APCP,AIRTMP">
+        </EditTextPreference>
+    </PreferenceScreen>
+
+    <PreferenceScreen
+        android:key="userPS"
+        android:title="User&apos;s Data" >
+
+        <EditTextPreference
+            android:defaultValue="NOCAL"
+            android:key="CALL"
+            android:summary="Client Callsign"
+            android:title="My Callsign" >
+        </EditTextPreference>
+
+        <EditTextPreference
+            android:key="PASSWORD"
+            android:summary="For Severs V1.1 and above"
+            android:title="Session Password"
+            android:inputType="textPassword">
+        </EditTextPreference>
+    </PreferenceScreen>
+
+    <PreferenceScreen
+        android:key="emailPS"
+        android:title="EMAIL Data" >
+
+        <EditTextPreference
+            android:defaultValue="pop3.unknown.com"
+            android:key="POPHOST"
+            android:summary="POP3 host name"
+            android:title="Hostname" >
+        </EditTextPreference>
+
+        <EditTextPreference
+            android:key="POPUSER"
+            android:summary="(may need &quot;@&quot; and domain)"
+            android:title="Username" >
+        </EditTextPreference>
+
+        <EditTextPreference
+            android:defaultValue=""
+            android:key="POPPASS"
+            android:summary="POP3 Password"
+            android:title="Account Password"
+            android:inputType="textPassword">
+        </EditTextPreference>
+
+        <EditTextPreference
+            android:defaultValue="Please-Enter-your-return-address"
+            android:key="RETURNADDRESS"
+            android:summary="(Optional)"
+            android:title="Return Address" >
+        </EditTextPreference>
+    </PreferenceScreen>
+    <PreferenceScreen
+        android:title="GPS Time Selection"
+        android:key="GPSTimePS">
+        <CheckBoxPreference
+            android:summary="For accurate time display"
+            android:title="Use GPS time"
+            android:key="USEGPSTIME" />
+        <EditTextPreference
+            android:key="LEAPSECONDS"
+            android:summary="For some devices (typical 16 seconds)"
+            android:title="Leap Seconds Correction"
+            android:defaultValue="0" />
+    </PreferenceScreen>
+    <PreferenceScreen
+        android:key="bluetoothPS"
+        android:title="BLUETOOTH AUDIO" >
+        <CheckBoxPreference
+            android:defaultValue="false"
+            android:key="BLUETOOTHAUTOCONNECT"
+            android:title="Auto Connect Bluetooth Audio"
+            android:summary="When Bluetooth Device is Present" />
+        <EditTextPreference
+            android:key="BLUETOOTHDEVICENAME"
+            android:title="Name of Bluetooth Device for Audio"
+            android:summary="As shown in Bluetooth Settings" />
+    </PreferenceScreen>
+
+</PreferenceScreen>

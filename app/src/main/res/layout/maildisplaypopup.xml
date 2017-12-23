@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+	android:id="@+id/mail_popup" android:orientation="vertical"
+	android:layout_width="fill_parent" android:background="#F0000040"
+	android:layout_height="fill_parent" android:weightSum="1">
+	<ScrollView android:id="@+id/terminalscrollview"
+		android:layout_width="fill_parent" android:layout_height="wrap_content"
+		android:layout_weight="1.00">
+		<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+			android:orientation="vertical" 
+			android:layout_width="fill_parent"
+			android:layout_height="fill_parent" 
+			android:weightSum="1">
+			<TextView xmlns:android="http://schemas.android.com/apk/res/android"
+				android:textIsSelectable="true"
+				android:id="@+id/emailtext" 
+				android:layout_width="fill_parent"
+				android:layout_height="wrap_content" 
+				android:textSize="18sp"
+				android:padding="5dp" />
+			<LinearLayout android:id="@+id/FrameLayout1"
+				android:layout_width="fill_parent" 
+				android:layout_height="wrap_content"
+				android:layout_weight="0.08" 
+				android:weightSum="1">
+				<Button android:id="@+id/button_clipboard"
+					android:layout_height="87dp" 
+					android:text="To Clipboard"
+					android:layout_width="87dp"></Button>
+				<TextView xmlns:android="http://schemas.android.com/apk/res/android"
+					android:id="@+id/emailcliptext"
+					android:layout_height="wrap_content"
+					android:textSize="18sp" 
+					android:padding="5dp"
+					android:text="Press to copy the email text to the clipboard \n\n"
+					android:layout_width="fill_parent" />
+			</LinearLayout>
+			<LinearLayout android:id="@+id/FrameLayout2"
+				android:layout_width="fill_parent" 
+				android:layout_height="wrap_content"
+				android:layout_weight="0.08" 
+				android:weightSum="1">
+				<Button android:id="@+id/button_return"
+					android:layout_height="87dp" 
+					android:text="Return"
+					android:layout_width="87dp"></Button>
+				<TextView xmlns:android="http://schemas.android.com/apk/res/android"
+					android:id="@+id/emailreturntext"
+					android:layout_height="wrap_content"
+					android:textSize="18sp" 
+					android:padding="5dp"
+					android:text="Press Return button or the Back key on the device \n\n"
+					android:layout_width="fill_parent" />
+			</LinearLayout>
+		</LinearLayout>
+	</ScrollView>
+</LinearLayout>
+
+

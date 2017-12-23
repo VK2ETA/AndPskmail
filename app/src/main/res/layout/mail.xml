@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical"
+    android:layout_width="fill_parent"
+    android:layout_height="fill_parent"
+    android:weightSum="1"
+	android:id="@+id/mailscreen" >
+    <ListView android:layout_width="fill_parent"
+        android:stackFromBottom="true"
+        android:transcriptMode="alwaysScroll"
+        android:id="@+id/maillist" android:layout_height="298dp" android:layout_weight="0.82"/>
+    <LinearLayout android:id="@+id/FrameLayout1" android:layout_width="fill_parent"
+    android:layout_height="50dp" android:layout_weight="0.08" android:weightSum="1">
+        <Button android:id="@+id/button_headers" android:text="Headers" android:layout_height="fill_parent" android:layout_weight="0.25" android:layout_width="fill_parent"></Button>
+        <Button android:id="@+id/button_inbox" android:text="Inbox" android:layout_height="fill_parent" android:layout_weight="0.25" android:layout_width="fill_parent"></Button>
+        <Button android:id="@+id/button_outbox" android:text="Outbox" android:layout_height="fill_parent" android:layout_weight="0.25" android:layout_width="fill_parent"></Button>
+        <Button android:id="@+id/button_sentitems" android:text="Sent Items" android:layout_height="fill_parent" android:layout_weight="0.25" android:layout_width="fill_parent"></Button>
+    </LinearLayout>
+    <LinearLayout android:id="@+id/FrameLayout2" android:layout_width="fill_parent"
+    android:layout_height="50dp" android:layout_weight="0.08" android:weightSum="1">
+        <Button android:id="@+id/button_qtc" android:text="QTC?" android:layout_height="fill_parent" android:layout_weight="0.25" android:layout_width="0dp"></Button>
+        <Button android:id="@+id/button_newmail" android:text="NEW MAIL" android:layout_height="fill_parent" android:layout_weight="0.25" android:layout_width="0dp"></Button>
+        <Button android:id="@+id/button_sendmail" android:text="SEND MAIL" android:layout_height="fill_parent" android:layout_weight="0.25" android:layout_width="0dp"></Button>
+        <Button android:id="@+id/button_delete" android:text="DELETE MAIL" android:layout_height="fill_parent" android:layout_weight="0.25" android:layout_width="0dp"></Button>
+    </LinearLayout>
+    <EditText android:layout_weight="0.02" 
+		android:maxLines="1" 
+		android:textSize="10pt" 
+		android:id="@+id/edit_text_out" 
+		android:layout_width="fill_parent" 
+		android:layout_height="wrap_content">
+        <requestFocus></requestFocus>
+    </EditText>
+</LinearLayout>

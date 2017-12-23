@@ -1,0 +1,209 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="fill_parent"
+    android:layout_height="fill_parent"
+    android:orientation="vertical"
+    android:weightSum="1"
+	android:id="@+id/modemwwfscreen" >
+
+    <LinearLayout
+        android:id="@+id/FrameLayout1"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:layout_weight="0.02"
+        android:weightSum="1" >
+
+        <TextView
+            android:id="@+id/cputext"
+            android:layout_width="fill_parent"
+            android:layout_height="fill_parent"
+            android:layout_weight="0.90"
+            android:text="CPU" >
+        </TextView>
+
+        <ProgressBar
+            android:id="@+id/cpu_load"
+            style="?android:attr/progressBarStyleHorizontal"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:layout_weight="0.10"
+            android:max="100"
+            android:progress="0" />
+    </LinearLayout>
+
+    <ScrollView
+        android:id="@+id/modemscrollview"
+        android:layout_width="fill_parent"
+        android:layout_height="60dp"
+        android:layout_weight="0.66" >
+
+        <TextView
+            android:textIsSelectable="false"
+            android:id="@+id/modemview"
+            android:layout_width="fill_parent"
+            android:layout_height="fill_parent"
+            android:layout_weight="1.00"
+            android:text="Pskmail Modem Screen" >
+        </TextView>
+    </ScrollView>
+
+    <LinearLayout
+        android:id="@+id/FrameLayout2"
+        android:layout_width="fill_parent"
+        android:layout_height="111dp"
+        android:layout_gravity="bottom"
+        android:layout_weight="0.12"
+        android:weightSum="1" >
+
+        <LinearLayout
+            android:id="@+id/FrameLayout3"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:layout_weight="0.98"
+            android:orientation="vertical"
+            android:weightSum="1" >
+
+            <view
+                android:id="@+id/WFbox"
+                android:layout_width="fill_parent"
+                android:layout_height="111dp"
+                android:layout_gravity="fill_horizontal"
+                class="com.AndPskmail.waterfallView" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/FrameLayout4"
+            android:layout_width="wrap_content"
+            android:layout_height="105dp"
+            android:layout_gravity="center"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:weightSum="1" >
+
+            <Button
+                android:id="@+id/button_wfsensup"
+                android:layout_width="52dp"
+                android:layout_height="53dp"
+                android:layout_weight="0.50"
+                android:text="SENS +" >
+            </Button>
+
+            <Button
+                android:id="@+id/button_wfsensdown"
+                android:layout_width="52dp"
+                android:layout_height="53dp"
+                android:layout_weight="0.50"
+                android:text="SENS -" >
+            </Button>
+        </LinearLayout>
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/FrameLayout5"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:layout_weight="0.03"
+        android:weightSum="1" >
+
+        <TextView
+            android:id="@+id/sqtext"
+            android:layout_width="fill_parent"
+            android:layout_height="fill_parent"
+            android:layout_weight="0.90"
+            android:text="S2N" >
+        </TextView>
+
+        <ProgressBar
+            android:id="@+id/signal_quality"
+            style="?android:attr/progressBarStyleHorizontal"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:layout_weight="0.10"
+            android:max="100"
+            android:progress="0" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/FrameLayout6"
+        android:layout_width="fill_parent"
+        android:layout_height="40dp"
+        android:layout_weight="0.08"
+        android:weightSum="1" >
+
+        <Button
+            android:id="@+id/button_modeUP"
+            android:layout_width="0dp"
+            android:layout_height="fill_parent"
+            android:layout_weight="0.25"
+            android:text="MODE UP" >
+        </Button>
+
+        <Button
+            android:id="@+id/button_squelchUP"
+            android:layout_width="0dp"
+            android:layout_height="fill_parent"
+            android:layout_weight="0.25"
+            android:text="SQLCH    UP" >
+        </Button>
+
+		<Button
+            android:id="@+id/button_modemONOFF"
+            android:layout_width="0dp"
+            android:layout_height="fill_parent"
+            android:layout_weight="0.25"
+            android:text="MODEM ON/OFF" >
+        </Button>
+
+        <Button
+            android:id="@+id/button_stopTX"
+            android:layout_width="0dp"
+            android:layout_height="fill_parent"
+            android:layout_weight="0.25"
+            android:text="STOP TX" >
+        </Button>
+
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/FrameLayout7"
+        android:layout_width="fill_parent"
+        android:layout_height="40dp"
+        android:layout_weight="0.08"
+        android:weightSum="1" >
+
+        <Button
+            android:id="@+id/button_modeDOWN"
+            android:layout_width="0dp"
+            android:layout_height="fill_parent"
+            android:layout_weight="0.25"
+            android:text="MODE DOWN" >
+        </Button>
+
+        <Button
+            android:id="@+id/button_squelchDOWN"
+            android:layout_width="0dp"
+            android:layout_height="fill_parent"
+            android:layout_weight="0.25"
+            android:text="SQLCH DOWN" >
+        </Button>
+		
+        <Button
+            android:id="@+id/button_tune"
+            android:layout_width="0dp"
+            android:layout_height="fill_parent"
+            android:layout_weight="0.25"
+            android:text="TUNE" >
+        </Button>
+
+        <Button
+            android:id="@+id/button_waterfallONOFF"
+            android:layout_width="0dp"
+            android:layout_height="fill_parent"
+            android:layout_weight="0.25"
+            android:text="W.FALL ON/OFF" >
+        </Button>
+
+    </LinearLayout>
+
+</LinearLayout>

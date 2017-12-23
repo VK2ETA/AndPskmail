@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+
+<resources>
+   
+    <string-array name="resume">
+        <item>Accept</item>
+        <item>Reject</item>
+        <item>Discard</item>
+    </string-array>
+    
+    <string-array name="resume_values">
+        <item>Accept</item>
+        <item>Reject</item>
+        <item>Discard</item>
+    </string-array>
+    
+    
+</resources>

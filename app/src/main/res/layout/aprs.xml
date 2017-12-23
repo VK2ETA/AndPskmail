@@ -1,0 +1,163 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="fill_parent"
+    android:layout_height="fill_parent"
+    android:orientation="vertical"
+    android:weightSum="1"
+    android:id="@+id/aprsscreen" >
+
+    <LinearLayout
+        android:id="@+id/FrameLayout1"
+        android:layout_width="fill_parent"
+        android:layout_height="50dp"
+        android:weightSum="1" >
+
+        <CheckBox
+            android:id="@+id/autobeacon"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_weight="0.25"
+            android:text="Auto Beacon" />
+
+        <CheckBox
+            android:id="@+id/autolink"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_weight="0.25"
+            android:text="Auto Link" />
+    </LinearLayout>
+    <LinearLayout
+        android:id="@+id/FrameLayout2"
+        android:layout_width="fill_parent"
+        android:layout_height="50dp"
+        android:weightSum="1" >
+        <TextView
+            android:id="@+id/qrgtext"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_weight="0.3333333"
+            android:text="Minute" >
+        </TextView>
+        <Spinner
+            android:id="@+id/qrg_spinner"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_weight="0.3333333"
+            android:spinnerMode="dropdown" />
+        <TextView
+            android:id="@+id/minsec"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_weight="0.3333334"
+            android:textSize="30sp"
+            android:text="00:00" >
+        </TextView>
+    </LinearLayout>
+    <LinearLayout
+        android:id="@+id/FrameLayout2X"
+        android:layout_width="fill_parent"
+        android:layout_height="50dp"
+        android:weightSum="1" >
+        <TextView
+            android:id="@+id/periodtext"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_weight="0.3333333"
+            android:text="Every (Min)" >
+        </TextView>
+        <Spinner
+            android:id="@+id/period_spinner"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_weight="0.3333333"
+            android:spinnerMode="dropdown" />
+        <Spinner
+            android:id="@+id/modes_spinner"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_weight="0.3333334"
+            android:spinnerMode="dropdown" />
+    </LinearLayout>
+    <ScrollView
+        android:id="@+id/aprsscrollview"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:layout_weight="1.00" >
+
+        <TextView
+            android:textIsSelectable="true"
+            android:id="@+id/aprsview"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:layout_weight="1.00"
+            android:text="Pskmail APRS" >
+        </TextView>
+    </ScrollView>
+
+    <LinearLayout
+        android:id="@+id/FrameLayout3"
+        android:layout_width="fill_parent"
+        android:layout_height="50dp"
+        android:weightSum="1" >
+
+        <Button
+            android:id="@+id/button_beacon"
+            android:layout_width="fill_parent"
+            android:layout_height="fill_parent"
+            android:layout_weight="0.25"
+            android:text="BEACON" >
+        </Button>
+
+        <Button
+            android:id="@+id/button_ping"
+            android:layout_width="fill_parent"
+            android:layout_height="fill_parent"
+            android:layout_weight="0.25"
+            android:text="PING" >
+        </Button>
+
+        <Button
+            android:id="@+id/button_inquire"
+            android:layout_width="fill_parent"
+            android:layout_height="fill_parent"
+            android:layout_weight="0.25"
+            android:text="INQ." >
+        </Button>
+
+        <Button
+            android:id="@+id/button_link"
+            android:layout_width="fill_parent"
+            android:layout_height="fill_parent"
+            android:layout_weight="0.25"
+            android:text="LINK" >
+        </Button>
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/FrameLayout4"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:weightSum="1" >
+
+        <EditText
+            android:id="@+id/edit_text_out"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:layout_weight="0.92"
+            android:maxLines="3"
+            android:textSize="10pt" >
+
+            <requestFocus >
+            </requestFocus>
+        </EditText>
+
+        <Button
+            android:id="@+id/button_aprsmsg"
+            android:layout_width="wrap_content"
+            android:layout_height="fill_parent"
+            android:layout_weight="0.08"
+            android:text="APRS MSG" >
+        </Button>
+    </LinearLayout>
+
+</LinearLayout>

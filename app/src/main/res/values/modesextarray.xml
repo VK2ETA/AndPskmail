@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+
+<resources>
+   
+    <string-array name="modesext">
+        <item>TX=RX</item>
+        <item>PSK500</item>
+        <item>PSK250</item>
+        <item>PSK125</item>
+        <item>PSK63</item>
+        <item>PSK31</item>
+    </string-array>
+    
+    <string-array name="modeext_values">
+        <item>0</item>
+        <item>7</item>
+        <item>8</item>
+        <item>9</item>
+        <item>a</item>
+        <item>e</item>
+    </string-array>
+    
+    
+</resources>

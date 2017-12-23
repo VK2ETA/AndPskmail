@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+      package="com.AndPskmail"
+      android:versionCode="1"
+      android:versionName="1.1.2">
+    <uses-sdk android:minSdkVersion="9" android:targetSdkVersion="25"/>
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"></uses-permission>
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"></uses-permission>
+    <uses-permission android:name="android.permission.RECORD_AUDIO"></uses-permission>
+    <uses-permission android:name="android.permission.BLUETOOTH"></uses-permission>
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS"></uses-permission>
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN"></uses-permission>
+    <uses-permission android:name="android.permission.READ_PHONE_STATE"></uses-permission>
+    <uses-permission android:name="android.permission.READ_LOGS"/>
+    <uses-permission android:name="android.permission.READ_CONTACTS"/>
+    <uses-permission android:name="android.permission.BROADCAST_STICKY"/>
+
+    <application
+        android:icon="@drawable/icon"
+        android:label="@string/app_name"
+        android:name="AndPskmailDebug"
+        android:theme="@style/Theme.AppCompat">
+        <activity android:name=".AndPskmail"
+                  android:label="@string/app_name"
+                  android:configChanges="keyboardHidden|orientation|screenLayout"
+                  android:windowSoftInputMode="stateHidden">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+        <activity android:name="myPreferences">
+        </activity>
+        <service android:name=".Processor">
+        </service>
+
+    </application>
+</manifest>

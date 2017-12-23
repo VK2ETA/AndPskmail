@@ -1,0 +1,167 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="fill_parent"
+    android:layout_height="fill_parent"
+    android:orientation="vertical"
+    android:weightSum="1" 
+	android:id="@+id/infoscreen" >
+	
+    <LinearLayout
+        android:id="@+id/FrameLayout1"
+        android:layout_width="fill_parent"
+        android:layout_height="180dp"
+        android:layout_weight="0.64" >
+
+        <ListView
+            android:id="@+id/webpageslist"
+            android:layout_width="fill_parent"
+            android:layout_height="fill_parent"
+            android:layout_gravity="bottom"
+            android:stackFromBottom="true"
+            android:transcriptMode="alwaysScroll" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/FrameLayout2"
+        android:layout_width="fill_parent"
+        android:layout_height="210dp"
+        android:layout_weight="0.35"
+        android:orientation="vertical"
+        android:weightSum="1" >
+
+        <LinearLayout
+            android:id="@+id/FrameLayout3"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:layout_weight="0.33"
+            android:weightSum="1" >
+
+            <Button
+                android:id="@+id/button_getmessages"
+                android:layout_width="fill_parent"
+                android:layout_height="fill_parent"
+                android:layout_weight="0.25"
+                android:text="Get MESSAGES" >
+            </Button>
+
+            <Button
+                android:id="@+id/button_gettidestations"
+                android:layout_width="fill_parent"
+                android:layout_height="fill_parent"
+                android:layout_weight="0.25"
+                android:text="GET TIDE Sations" >
+            </Button>
+
+            <Button
+                android:id="@+id/button_gettide"
+                android:layout_width="fill_parent"
+                android:layout_height="fill_parent"
+                android:layout_weight="0.25"
+                android:text="GET TIDE(# # #)" >
+            </Button>
+
+            <Button
+                android:id="@+id/button_getgribfile"
+                android:layout_width="fill_parent"
+                android:layout_height="fill_parent"
+                android:layout_weight="0.25"
+                android:text="Get GRIB File" >
+            </Button>
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/FrameLayout4"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:layout_weight="0.33"
+            android:weightSum="1" >
+
+            <Button
+                android:id="@+id/button_getiacfleetcodes"
+                android:layout_width="fill_parent"
+                android:layout_height="fill_parent"
+                android:layout_weight="0.25"
+                android:text="Get IAC Fleetcodes" >
+            </Button>
+
+            <Button
+                android:id="@+id/button_getiacforecast"
+                android:layout_width="fill_parent"
+                android:layout_height="fill_parent"
+                android:layout_weight="0.25"
+                android:text="Get IAC Forecasts" >
+            </Button>
+
+            <Button
+                android:id="@+id/button_getwwv"
+                android:layout_width="fill_parent"
+                android:layout_height="fill_parent"
+                android:layout_weight="0.25"
+                android:text="Get WWV" >
+            </Button>
+
+            <Button
+                android:id="@+id/button_getaprsstations"
+                android:layout_width="fill_parent"
+                android:layout_height="fill_parent"
+                android:layout_weight="0.25"
+                android:text="Get APRS Stations" >
+            </Button>
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/FrameLayout5"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:layout_weight="0.33"
+            android:weightSum="1" >
+
+            <Button
+                android:id="@+id/button_getvhfuhfrelays"
+                android:layout_width="fill_parent"
+                android:layout_height="fill_parent"
+                android:layout_weight="0.25"
+                android:text="Get V/UHF Relays" >
+            </Button>
+
+            <Button
+                android:id="@+id/button_getcampersites"
+                android:layout_width="fill_parent"
+                android:layout_height="fill_parent"
+                android:layout_weight="0.25"
+                android:text="Get CAMPER Sites" >
+            </Button>
+
+            <Button
+                android:id="@+id/button_getserverfreqs"
+                android:layout_width="fill_parent"
+                android:layout_height="fill_parent"
+                android:layout_weight="0.25"
+                android:text="Get SERVER Freqs" >
+            </Button>
+
+            <Button
+                android:id="@+id/button_getpskmailnews"
+                android:layout_width="fill_parent"
+                android:layout_height="fill_parent"
+                android:layout_weight="0.25"
+                android:text="Get PSKMAIL News" >
+            </Button>
+        </LinearLayout>
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/FrameLayout6"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:layout_weight="0.01" >
+
+        <EditText
+            android:id="@+id/edit_text_out"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:maxLines="1"
+            android:textSize="10pt" />
+    </LinearLayout>
+
+</LinearLayout>

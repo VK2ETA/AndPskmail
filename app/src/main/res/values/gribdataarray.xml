@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string-array name="gribdata">
+        <item>Default-3Days-Pressure-Wind</item>
+        <item>7Days-Rain-AirTemp-2Deg-8Hourly</item>
+        <item>4Days-Wind-Rain-AirTemp-2Deg-6Hourly</item>
+        <item>2Days-Wind-Rain-AirTemp-2Deg-6Hourly</item>
+        <item>1Day-Wind-Rain-AirTemp-LightningRisk-1Deg-4Hourly</item>
+        <item>4Days-Wind-Pressure-Waves-2Deg-8Hourly</item>
+        <item>2Days-Wind-Pressure-Waves-LightningRisk-2Deg-6Hourly</item>
+        <item>Custom-Request-1</item>
+        <item>Custom-Request-2</item>
+    </string-array>
+    <string-array name="gribdata_values">
+        <item></item>
+        <item>|2,2|0,8,...,168|APCP,AIRTMP</item>
+        <item>|2,2|0,6,...,96|WIND,APCP,AIRTMP</item>
+        <item>|2,2|0,6,...,48|WIND,APCP,AIRTMP</item>
+        <item>|1,1|0,4,...,24|WIND,APCP,AIRTMP,CAPE</item>
+        <item>|2,2|0,6,...,96|WIND,PRESS,WAVES</item>
+        <item>|2,2|0,6,...,72|WIND,PRESS,WAVES,CAPE</item>
+        <item>CUSTOMGRIBREQUEST1</item>
+        <item>CUSTOMGRIBREQUEST2</item>
+    </string-array>
+
+</resources>

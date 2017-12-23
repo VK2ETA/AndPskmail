@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="fill_parent"
+    android:layout_height="fill_parent"
+    android:orientation="vertical"
+    android:weightSum="1" >
+
+    <ScrollView
+        android:id="@+id/terminalscrollview"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:layout_weight="1.00" >
+
+        <LinearLayout
+            xmlns:android="http://schemas.android.com/apk/res/android"
+            android:layout_width="fill_parent"
+            android:layout_height="fill_parent"
+            android:orientation="vertical"
+            android:weightSum="1" >
+
+            <LinearLayout
+                android:id="@+id/FrameLayout1"
+                android:layout_width="fill_parent"
+                android:layout_height="wrap_content"
+                android:weightSum="1" >
+
+                <Button
+                    android:id="@+id/button_Browse_Contacts"
+                    android:layout_width="59dp"
+                    android:layout_height="fill_parent"
+                    android:text="To:" >
+                </Button>
+
+                <EditText
+                    android:id="@+id/emailaddress"
+                    android:layout_width="fill_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="top"
+                    android:textSize="10pt" 
+                    android:inputType="textEmailAddress">
+                    <requestFocus >
+                    </requestFocus>
+                </EditText>
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/FrameLayout2"
+                android:layout_width="fill_parent"
+                android:layout_height="wrap_content"
+                android:weightSum="1" >
+
+                <TextView
+                    android:id="@+id/textsubject"
+                    android:layout_width="69dp"
+                    android:layout_height="37dp"
+                    android:text="Subject:"
+                    android:textSize="8pt" >
+                </TextView>
+
+                <EditText
+                    android:id="@+id/emailsubject"
+                    android:layout_width="fill_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="top"
+                    android:textSize="10pt" >
+                </EditText>
+            </LinearLayout>
+
+            <EditText
+                android:id="@+id/emailbody"
+                android:layout_width="fill_parent"
+                android:layout_height="338dp"
+                android:gravity="top"
+                android:textSize="10pt" >
+            </EditText>
+
+            <LinearLayout
+                android:id="@+id/FrameLayout3"
+                android:layout_width="fill_parent"
+                android:layout_height="wrap_content"
+                android:weightSum="1" >
+
+                <Button
+                    android:id="@+id/button_tooutbox"
+                    android:layout_width="53dp"
+                    android:layout_height="fill_parent"
+                    android:layout_weight="0.50"
+                    android:text="POST to OUTBOX" >
+                </Button>
+
+                <Button
+                    android:id="@+id/button_discard"
+                    android:layout_width="53dp"
+                    android:layout_height="fill_parent"
+                    android:layout_weight="0.50"
+                    android:text="DISCARD" >
+                </Button>
+            </LinearLayout>
+        </LinearLayout>
+    </ScrollView>
+
+</LinearLayout>

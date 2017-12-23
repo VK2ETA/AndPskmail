@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:id="@+id/exit" android:title="EXIT"></item>
+    <item android:id="@+id/Bluetooth"
+        android:title="Bluetooth Audio">
+        <menu>
+            <item
+                android:id="@+id/BTon"
+                android:title="Bluetooth Audio ON"
+                android:showAsAction="never|withText">
+            </item>
+            <item
+                android:id="@+id/BToff"
+                android:title="Bluetooth Audio OFF"
+                android:showAsAction="never|withText">
+            </item>
+        </menu>
+    </item>
+    <item android:id="@+id/prefs" android:title="Settings" />
+    <item
+        android:id="@+id/Preferences"
+        android:title="Save/Restore Settings"
+        android:showAsAction="never|withText">
+        <menu>
+            <item
+                android:id="@+id/savePreferences"
+                android:title="Save Settings to File"
+                android:showAsAction="never|withText">
+            </item>
+            <item
+                android:id="@+id/restorePreferences"
+                android:title="Restore from File"
+                android:showAsAction="never|withText">
+            </item>
+            <item
+                android:id="@+id/defaultPreferences"
+                android:title="Restore to Default"
+                android:showAsAction="never|withText">
+            </item>
+        </menu>
+    </item>
+    <item android:title="Pending Transactions?" android:id="@+id/anypending"></item>
+    <item
+        android:id="@+id/Cleardata"
+        android:title="Clear Data"
+        android:showAsAction="never|withText">
+        <menu>
+            <item android:id="@+id/clearheaders" android:title="Clear HEADERS" />
+            <item android:id="@+id/clearoutbox" android:title="Clear OUTBOX" />
+            <item android:id="@+id/clearmailfile" android:title="Clear INBOX" />
+            <item android:id="@+id/clearsentmail" android:title="Clear SENT MAIL"></item>
+            <item android:id="@+id/cleardownloads" android:title="Clear Partial Downloads" />
+            <item android:id="@+id/clearuploads" android:title="Clear Partial Uploads"></item>
+        </menu>
+    </item>
+    <item
+        android:id="@+id/serveremaildata"
+        android:title="Server's Email Info"
+        android:showAsAction="never|withText">
+        <menu>
+            <item android:titleCondensed="Update server's records" android:id="@+id/updateserver" android:title="Update Server"></item>
+            <item android:id="@+id/setpassword" android:title="Send Session Password"></item>
+            <item android:id="@+id/resetrecord" android:title="Del. User Record"></item>
+        </menu>
+    </item>
+    <item
+        android:id="@+id/screens"
+        android:title="Screens"
+        android:showAsAction="never|withText">
+        <menu>
+            <item android:id="@+id/terminal" android:title="Terminal Screen" />
+            <item android:title="Modem Screen" android:id="@+id/modem" />
+            <item android:id="@+id/aprs" android:title="APRS Screen" />
+            <item android:id="@+id/inforequest" android:title="Info Screen"></item>
+            <item android:title="Email Screen" android:id="@+id/mail" />
+        </menu>
+    </item>
+    <item android:id="@+id/About" android:title="About"></item>
+</menu>
