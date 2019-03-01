@@ -39,8 +39,8 @@ import android.os.IBinder;
  */
 public class Processor extends Service{
 
-	static String application ="AndPskmail 1.2.0"; // Used to preset an empty status
-	static String version = "Version 1.2.0, 2017-07-25";
+	static String application ="AndPskmail 1.2.1"; // Used to preset an empty status
+	static String version = "Version 1.2.1, 2019-03-01";
 	public static int RxFrequencyOffset = 0;
 	public static boolean showallcharacters = false; //debugging
 	public static boolean justReceivedRSID = false;
