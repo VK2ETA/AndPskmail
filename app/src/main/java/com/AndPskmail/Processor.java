@@ -39,8 +39,8 @@ import android.os.IBinder;
  */
 public class Processor extends Service{
 
-	static String application ="AndPskmail 1.2.1"; // Used to preset an empty status
-	static String version = "Version 1.2.1, 2019-03-01";
+	static String application ="AndPskmail 1.2.2"; // Used to preset an empty status
+	static String version = "Version 1.2.2, 2019-09-24";
 	public static int RxFrequencyOffset = 0;
 	public static boolean showallcharacters = false; //debugging
 	public static boolean justReceivedRSID = false;
@@ -323,20 +323,15 @@ static String[] AltModes = {"       ","THOR8","MFSK16","THOR22",
 		// Start the RxThread
 		if (m != null) {
 			m.startmodem();
-			
-			// Use a ticker to notify user of the modem running in the background
-			CharSequence text = getText(R.string.Modem_Running);
 
-			// Set the scrolling text (JD FIX that)
-			Notification notification = new Notification(0, text, 0);
-
-			//JD make sure Android keeps this running even if resources are restrained
-			startForeground(1, notification);
+			//Make sure Android keeps this running even if resources are limited
+			//Display the notification in the system bar at the top at the same time
+			startForeground(1, AndPskmail.myNotification);
 
 
 		}
 		// Keep this service running until it is explicitly stopped, so use sticky.
-		return START_NOT_STICKY;
+		return START_STICKY;
 	}
 	
 	

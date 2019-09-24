@@ -41,6 +41,7 @@ import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Notification;
+import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.bluetooth.BluetoothAdapter;
@@ -59,6 +60,8 @@ import android.content.SharedPreferences;
 import android.content.SharedPreferences.OnSharedPreferenceChangeListener;
 import android.preference.PreferenceManager;
 import android.provider.ContactsContract.CommonDataKinds.Email;
+import android.support.v4.app.NotificationCompat;
+import android.support.v4.app.TaskStackBuilder;
 import android.telephony.PhoneStateListener;
 import android.telephony.TelephonyManager;
 import android.text.Editable;
@@ -174,7 +177,7 @@ public class AndPskmail extends AppCompatActivity {
     static ProgressBar SignalQuality = null;
     static ProgressBar CpuLoad = null;
 
-    static int currentview = 0;
+    static int currentview = TERMVIEW;
 
     //Toast text display (declared here to allow for quick replacement rather than queuing)
     private Toast myToast;
@@ -221,7 +224,7 @@ public class AndPskmail extends AppCompatActivity {
 
     //Notifications
     private NotificationManager myNotificationManager;
-    private Notification myNotification;
+    public static Notification myNotification = null;
 
     // Array adapter for the APRS messages
     public static ArrayAdapter<String> APRSArrayAdapter;
@@ -728,6 +731,40 @@ public class AndPskmail extends AppCompatActivity {
     };
 
 
+
+    private void returnToLastScreen() {
+        switch (currentview) {
+
+            case MODEMVIEWnoWF:
+            case MODEMVIEWwithWF:
+                displayModem(NORMAL, false);
+                break;
+
+            case APRSVIEW:
+                displayAPRS(NORMAL);
+                break;
+
+            case INFOREQUESTVIEW:
+                displayInforequest(NORMAL);
+                break;
+
+            case MAILHEADERSVIEW:
+            case MAILINBOXVIEW:
+            case MAILOUTBOXVIEW:
+            case MAILSENTITEMSVIEW:
+                displayMail(NORMAL, lastEmailScreen);
+                break;
+
+            case NEWMAILVIEW:
+                displayNewmail();
+                break;
+
+            case TERMVIEW:
+                default:
+                displayTerminal(NORMAL); //Just in case
+        }
+    }
+
     //Swipe (fling) handling to move from screen to screen
     private void NavigateScreens(int FlingDirection) {
 
@@ -1175,8 +1212,8 @@ public class AndPskmail extends AppCompatActivity {
         //Set server  call to default
         serverToCall = AndPskmail.myconfig.getPreference("SERVER");
 
-        // We start with the terminal "screen"
-        displayTerminal(NORMAL);
+        returnToLastScreen(); //Defaults to terminal screen
+
     }
 
 
@@ -1237,28 +1274,49 @@ public class AndPskmail extends AppCompatActivity {
             }
         } else { // start if not ON yet AND we haven't paused the modem manually
             if (!ProcessorON && !modemPaused) {
+                String NOTIFICATION_CHANNEL_ID = "com.AndPskmail";
+                String channelName = "Background Modem";
+                NotificationChannel chan = null;
+                NotificationCompat.Builder notificationBuilder = new NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_ID);
+                NotificationCompat.Builder mBuilder;
+                String chanId = "";
+                //New code for support of Android version 8+
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    chan = new NotificationChannel(NOTIFICATION_CHANNEL_ID, channelName, NotificationManager.IMPORTANCE_NONE);
+                    chan.setLightColor(Color.BLUE);
+                    chan.setLockscreenVisibility(Notification.VISIBILITY_PRIVATE);
+                    NotificationManager manager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+                    assert manager != null;
+                    manager.createNotificationChannel(chan);
+                    chanId = chan.getId();
+                }
+                mBuilder = new NotificationCompat.Builder(this, chanId)
+                        .setSmallIcon(R.drawable.notificationicon)
+                        .setContentTitle("Modem ON")
+                        .setContentText("Microphone/Bluetooth in use by App")
+                        .setOngoing(true);
+                // Creates an explicit intent for an Activity in your app
+                Intent notificationIntent = new Intent(this, AndPskmail.class);
+                notificationIntent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP
+                        | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+                //Google: The stack builder object will contain an artificial back stack for the started Activity.
+                // This ensures that navigating backward from the Activity leads out of your application to the Home screen.
+                TaskStackBuilder stackBuilder = TaskStackBuilder.create(this);
+                // Adds the back stack for the Intent (but not the Intent itself)
+                stackBuilder.addParentStack(AndPskmail.class);
+                // Adds the Intent that starts the Activity to the top of the stack
+                stackBuilder.addNextIntent(notificationIntent);
+                TaskStackBuilder nstackBuilder = TaskStackBuilder.create(myContext);
+                nstackBuilder.addParentStack(AndPskmail.class);
+                nstackBuilder.addNextIntent(notificationIntent);
+                PendingIntent pIntent = nstackBuilder.getPendingIntent(0, PendingIntent.FLAG_UPDATE_CURRENT);
+                mBuilder.setContentIntent(pIntent);
+                // VK2ETA notification is done in Processor service now
+                myNotification = mBuilder.build();
                 //Force garbage collection to prevent Out Of Memory errors on small RAM devices
                 System.gc();
                 startService(new Intent(AndPskmail.this, Processor.class));
                 ProcessorON = true;
-                //Only for Android 3.0 and UP
-                if (Double.valueOf(android.os.Build.VERSION.SDK) >= 11.0) {
-                    Intent notificationIntent = new Intent(this, AndPskmail.class);
-                    notificationIntent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
-                    PendingIntent pIntent = PendingIntent.getActivity(this, 0, notificationIntent, 0);
-
-                    // build notification
-                    // the addAction re-use the same intent to keep the example short
-                    myNotification = new Notification(R.drawable.notificationicon,
-                            "Modem ON", System.currentTimeMillis());
-
-//Must fix                    myNotification.setLatestEventInfo(myContext, "PSKMail Modem ON",
-                    //"Microphone/Bluetooth in use by Modem", pIntent);
-
-                    myNotification.flags |= Notification.FLAG_NO_CLEAR;
-
-                    //myNotificationManager.notify(9999, myNotification);
-                }
             }
         }
         AndPskmail.mHandler.post(AndPskmail.updatetitle);
@@ -4147,11 +4205,15 @@ public class AndPskmail extends AppCompatActivity {
             String s;
             MailArrayAdapter.clear();
             while ((s = br.readLine()) != null) {
+                //Trim initial spaces
+                while (s.startsWith(" ") && s.length() > 1) {
+                    s = s.substring(s.indexOf(" ") + 1);
+                }
                 if (s.length() > 10) {
                     String[] mystrarr = new String[4];
                     Integer myA = s.indexOf(" ");
-                    if (myA < 2)
-                        myA = 2;
+                    if (myA < 1) //stop gap
+                        myA = 1;
                     mystrarr[0] = s.substring(0, myA).trim(); // Number
                     // From
                     Integer myB = s.indexOf("  ");
@@ -4160,7 +4222,7 @@ public class AndPskmail extends AppCompatActivity {
                     Integer myC = s.lastIndexOf(" ");
                     mystrarr[2] = s.substring(myB + 2, myC).trim();
                     // Size
-                    mystrarr[3] = s.substring(myC, s.length()).trim();
+                    mystrarr[3] = s.substring(myC).trim();
                     MailArrayAdapter.add(mystrarr[0] + "  " + mystrarr[1]
                             + "  " + mystrarr[2] + "  " + mystrarr[3]);
                 }
