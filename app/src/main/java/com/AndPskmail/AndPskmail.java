@@ -209,6 +209,7 @@ public class AndPskmail extends AppCompatActivity {
     public static config myconfig = null;
 
     public static String serverToCall = "";
+    public static String serverAccessPassword = "";
 
     //Saved APRS text (APRS status message)
     private static String savedAprsMessage = "";
@@ -1210,7 +1211,8 @@ public class AndPskmail extends AppCompatActivity {
         }
 
         //Set server  call to default
-        serverToCall = AndPskmail.myconfig.getPreference("SERVER");
+        //No: Let the first connect set the variable as we have an access password to initialise too possibly
+        // serverToCall = AndPskmail.myconfig.getPreference("SERVER");
 
         returnToLastScreen(); //Defaults to terminal screen
 
@@ -2048,6 +2050,8 @@ public class AndPskmail extends AppCompatActivity {
                         }
                         TextView view = (TextView) connectDialogView.findViewById(R.id.edit_text_connect);
                         serverToCall = view.getText().toString().trim();
+                        TextView pwview = (TextView) connectDialogView.findViewById(R.id.edit_text_accesspassword);
+                        serverAccessPassword = pwview.getText().toString().trim();
                         if (serverToCall.length() == 0) {
                             // Hide the keyboard since we handle it manually
                             InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
@@ -2060,7 +2064,11 @@ public class AndPskmail extends AppCompatActivity {
                             imm.hideSoftInputFromWindow(connectDialogView.getWindowToken(), 0);
                             //Send the connect command
                             Processor.Connecting = true;
-                            Processor.Status = "Connecting";
+                            if (serverAccessPassword.length() == 0) {
+                                Processor.Status = "Connecting";
+                            } else {
+                                Processor.Status = "Connect. w/ pw";
+                            }
                             //Reset receiving modem to default centre frequency
                             Processor.m.reset();
                             Processor.q.send_rsid_command("ON");
@@ -2074,13 +2082,17 @@ public class AndPskmail extends AppCompatActivity {
 
         AlertDialog myConnectAlert = myAlertBuilder.create();
         EditText view = (EditText) connectDialogView.findViewById(R.id.edit_text_connect);
+        EditText pwView = (EditText) connectDialogView.findViewById(R.id.edit_text_accesspassword);
         if (serverToCall.length() == 0) { //use default server call from preferences
             String defaultServerCall = AndPskmail.myconfig.getPreference("SERVER");
+            String defaultServerPw = AndPskmail.myconfig.getPreference("SERVERACCESSPASSWORD");
             view.setText(defaultServerCall);
+            pwView.setText(defaultServerPw);
         } else { //We had already typed-in a server call. Propose first as we are likely to use it again
             view.setText(serverToCall);
+            pwView.setText(serverAccessPassword);
         }
-        myConnectAlert.setTitle("Connection Server");
+        myConnectAlert.setTitle("Connect to Server:");
         myConnectAlert.show();
 
     }

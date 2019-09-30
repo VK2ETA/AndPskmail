@@ -264,7 +264,11 @@ public class arq {
             // Get the GPS position data 
             Location location = null;
             if (AndPskmail.locationManager != null) {
-            	location = AndPskmail.locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
+                try {
+                    location = AndPskmail.locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
+                } catch (SecurityException e) {
+                    //noting for now, reports 0,0 location
+                }
             }
 
 //JD FIX: add this here            if (location != null) {
@@ -644,7 +648,7 @@ public class arq {
                 send_txrsid_command("ON");
 //                Thread.sleep(1000);
                info = connectblock();
-               outstring = make_block(info) + FrameEnd;
+               outstring = make_blockWithPassword(info) + FrameEnd;
                break;
            case TXSummon:
                send_txrsid_command("ON");
@@ -807,7 +811,7 @@ public class arq {
         }
     }
 
-    
+
     /** /
      * Adds SOH and checksum
      * e.g.: '<SOH>00jThis is data for'akj0
@@ -817,9 +821,24 @@ public class arq {
     public String make_block(String info) {
         String check="";
         if (info.length()>0) {
-		check = checksum(info);
-	}
-	return StartHeader + info + check;
+            check = checksum(info);
+        }
+        return StartHeader + info + check;
+    }
+
+
+    /** /
+     * Adds SOH and checksum
+     * e.g.: '<SOH>00jThis is data for'akj0
+     * @param info
+     * @return
+     */
+    public String make_blockWithPassword(String info) {
+        String check="";
+        if (info.length()>0) {
+            check = checksum(info + AndPskmail.serverAccessPassword);
+        }
+        return StartHeader + info + check;
     }
 
 

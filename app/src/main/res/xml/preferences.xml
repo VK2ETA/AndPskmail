@@ -4,8 +4,15 @@
     <EditTextPreference
         android:defaultValue="NOCAL"
         android:key="SERVER"
-        android:summary="Server Callsign"
+        android:summary="Default Server Callsign"
         android:title="Server Callsign" >
+    </EditTextPreference>
+
+    <EditTextPreference
+        android:inputType="textPassword"
+        android:key="SERVERACCESSPASSWORD"
+        android:summary="Only if the server uses an access password"
+        android:title="Default Server Access Password" >
     </EditTextPreference>
 
     <ListPreference

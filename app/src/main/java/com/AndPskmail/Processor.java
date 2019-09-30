@@ -40,9 +40,9 @@ import android.os.IBinder;
 public class Processor extends Service{
 
 	static String application ="AndPskmail 1.2.2"; // Used to preset an empty status
-	static String version = "Version 1.2.2, 2019-09-24";
-	public static int RxFrequencyOffset = 0;
-	public static boolean showallcharacters = false; //debugging
+	static String version = "Version 1.2.2, 2019-09-30";
+	//public static int RxFrequencyOffset = 0;
+	//public static boolean showallcharacters = false; //debugging
 	public static boolean justReceivedRSID = false;
 
 	static boolean onWindows = true;
@@ -55,8 +55,8 @@ public class Processor extends Service{
 	static modemmodeenum defaultmode = modemmodeenum.PSK250;
 	static String CurrentModemProfile = "0";
 	static int sending_link = 5;
-	static int sending_beacon = 0;
-	static boolean CBeacon = true;
+	//static int sending_beacon = 0;
+	//static boolean CBeacon = true;
 	static String HomePath = "";
 	static String Dirprefix = "/.pskmail/";
 	static String Separator = "/";
