@@ -181,12 +181,12 @@ public class RXBlock{
        BlockCRC = checksum(checkstring);
 
         if (BlockCRC.equals(crc)){
-           valid =true;
+           valid = true;
         }
 
        // unproto Blocks
        if ( type.equals( "u")) {
-    	   //Display in APRS screen
+    	   //Display in APRS screen even if crc is bad
     	   Processor.APRSwindow += payload + "\n";
     	   AndPskmail.mHandler.post(AndPskmail.addtoAPRS);
 
@@ -214,7 +214,7 @@ public class RXBlock{
                }
 
            }
-          // look if we have a link acknowledgement and set some globals if true
+           // look if we have a link acknowledgement and set some globals if true
            if (Processor.autolink) {
                Matcher mla = pla.matcher(payload);
                if (mla.lookingAt()) {

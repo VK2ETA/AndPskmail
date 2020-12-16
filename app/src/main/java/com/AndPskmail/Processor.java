@@ -39,8 +39,8 @@ import android.os.IBinder;
  */
 public class Processor extends Service{
 
-	static String application ="AndPskmail 1.2.2"; // Used to preset an empty status
-	static String version = "Version 1.2.2, 2019-09-30";
+	static String application ="AndPskmail 1.2.3"; // Used to preset an empty status
+	static String version = "Version 1.2.3, 2020-12-15";
 	//public static int RxFrequencyOffset = 0;
 	//public static boolean showallcharacters = false; //debugging
 	public static boolean justReceivedRSID = false;
@@ -140,7 +140,8 @@ static String[] AltModes = {"       ","THOR8","MFSK16","THOR22",
 	static String LastBlockExchange = "  ";
 	static long LastSessionExchangeTime = 0;
 	static boolean Connected = false;
-	static boolean Connecting = false;
+	public static boolean connectingPhase = false; //True from connect request until receipt of greeting/Server info
+	public static boolean Connecting = false; //True until first acknowledgment of server's connect ack
 	static boolean Aborting = false;
 	static boolean Scanning = false;
 	static boolean linked = false; // flag for link ack
@@ -417,8 +418,7 @@ static String[] AltModes = {"       ","THOR8","MFSK16","THOR22",
 						//Not needed with integrated modem as always on:  q.send_rsid_command("ON");
 						pint = (int) pchr - 48;
 						if (pint <= (modelist.length()) & pint > 0) {
-							//The table is read from right to left
-							//from the server starting at 1
+							//The table is read from right to left from the server, starting at 1
 							TxModem = Modem.getmode(modelist.charAt(modelist.length() - pint));
 							//zero = symmetric mode
 							if (CurrentModemProfile.equals("0")) {
@@ -463,8 +463,7 @@ static String[] AltModes = {"       ","THOR8","MFSK16","THOR22",
 						q.send_rsid_command("OFF");
 						// ident block
 					} else if (rxb.session.equals(session) & rxb.type.equals("i")) {
-						// discard
-						// data block
+						// discard, only info block
 					} else if (rxb.valid & rxb.session.equals(session) ) {
 						myrxstatus = sm.doRXBuffer(rxb.payload, rxb.type);
 					} else if (rxb.session.equals(session) ) {
@@ -485,7 +484,7 @@ static String[] AltModes = {"       ","THOR8","MFSK16","THOR22",
     					}
     				}
 					 */
-					// PI4TUE 0.9.33-13:28:52-IM46>
+					// PI4TUE 0.9.33-13:28:52-IM46> OR Java server with "Hi, this is the Pskmail Server of ...."
 					if (Blockline.contains(q.servercall)) {
 						//                                   Pattern ppc = Pattern.compile(".*(\\d\\.\\d).*\\-\\d+:\\d+:(\\d+)\\-(.*)M(\\d+)");
 						Pattern ppc = Pattern.compile(".*\\S+\\s\\S+\\s(\\S{3}).*\\-\\d+:\\d+:(\\d+)\\-(.*)M(\\d+)");
@@ -515,6 +514,13 @@ static String[] AltModes = {"       ","THOR8","MFSK16","THOR22",
 
 								Processor.TX_Text += "~Mp" + output + "\n";
 							}
+						} else {
+							Pattern pps = Pattern.compile(".*"+q.servercall+" V(\\d{1,2}\\.\\d{1,2}\\.\\d{1,2}),\\sHi.*");
+							//System.out.println(Blockline);
+							Matcher mps = pps.matcher(Blockline);
+							if (mps.lookingAt()) {
+								Processor.connectingPhase = false;
+							}
 						}
 					}
 
@@ -522,8 +528,8 @@ static String[] AltModes = {"       ","THOR8","MFSK16","THOR22",
 
 				if (!Connected & Blockline.contains("QSL") & Blockline.contains(q.callsign)) {  
 					//Display in APRS Window, even if not valid block
-					Processor.APRSwindow += "\n" + Blockline + "\n";
-					AndPskmail.mHandler.post(AndPskmail.addtoAPRS);
+					//Processor.APRSwindow += "\n" + Blockline + "\n";
+					//AndPskmail.mHandler.post(AndPskmail.addtoAPRS);
 
 					String pCheck = "";
 					Pattern psc = Pattern.compile(".*de ([A-Z0-9\\-]+)\\s([0123456789ABCDEF]{4}).*");

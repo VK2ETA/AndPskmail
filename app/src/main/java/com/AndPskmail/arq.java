@@ -24,6 +24,8 @@ import java.util.logging.Logger;
 import android.location.Location;
 import android.location.LocationManager;
 
+import static java.lang.System.currentTimeMillis;
+
 /**
  *
  * @author Per Crusefalk <per@crusefalk.se>
@@ -278,7 +280,13 @@ public class arq {
             if (location != null) {
             	latnum = (float) location.getLatitude();
             	lonnum = (float) location.getLongitude();
+                //VK2ETA debug
+                Long locationAge = ((System.currentTimeMillis() - location.getTime()) / 1000); //In seconds
+                //AndPskmail.myInstance.topToastText("Using GPS Location that is : " + latnum + ", " + lonnum + " and is " + locationAge + " Seconds Old");
+                AndPskmail.myInstance.topToastText("Using GPS Location that is" + locationAge + " Seconds Old");
             } else {
+                //VK2ETA debug
+                AndPskmail.myInstance.topToastText("Last Known GPS Location is not valid");
             	//JD: TO-DO prompt for location or use preferences' location
             }
 
@@ -678,11 +686,15 @@ public class arq {
         		   rxRsidCounter = 0;
         	   } else if (rxRsidCounter > 0 && (Processor.TxModem == modemmodeenum.MFSK8 ||
         			   Processor.TxModem == modemmodeenum.MFSK16 ||
-                	   Processor.TxModem == modemmodeenum.PSK63 ||
+                       Processor.TxModem == modemmodeenum.PSK63 ||
         			   Processor.TxModem == modemmodeenum.PSK31   )) {
         		   send_txrsid_command("ON");
         		   rxRsidCounter = 0;
         	   };
+        	   //In any case send RSID until we have full connect exchange so that the server can gauge it's tx delay
+               if (Processor.connectingPhase) {
+                   send_txrsid_command("ON");
+               }
         	   info = statusblock(Processor.myrxstatus);
         	   outstring = make_block(info) + FrameEnd;
         	   break;

@@ -1031,7 +1031,8 @@ public class AndPskmail extends AppCompatActivity {
                             .getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
                     String deviceName = device.getName();
                     String wantedDevice = myconfig.getPreference("BLUETOOTHDEVICENAME", "noname");
-                    if (toBluetooth
+                    if (deviceName != null
+                            && toBluetooth
                             && deviceName.equals(wantedDevice)
                             && mBluetoothAdapter != null
                             && myconfig.getPreferenceB("BLUETOOTHAUTOCONNECT", false)) {
@@ -1046,7 +1047,8 @@ public class AndPskmail extends AppCompatActivity {
                             .getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
                     String deviceName = device.getName();
                     String wantedDevice = myconfig.getPreference("BLUETOOTHDEVICENAME", "noname");
-                    if (deviceName.equals(wantedDevice)
+                    //Android 10 bug?? deviceName is sometimes null
+                    if (deviceName != null && deviceName.equals(wantedDevice)
                             && mBluetoothAdapter != null
                             && myconfig.getPreferenceB("BLUETOOTHAUTOCONNECT", false)) {
                         deviceJustConnected = true;
@@ -1163,10 +1165,10 @@ public class AndPskmail extends AppCompatActivity {
                                 }
                                 //Compare to current device time and date and calculate the offset to be applied at display
                                 long nowInMilli = System.currentTimeMillis();
-                                long timeTarget = nowInMilli;
                                 Time mytime = new Time();
-                                mytime.set(timeTarget); //initialized to now
+                                mytime.set(nowInMilli); //initialized to now
                                 int DeviceTime = mytime.second + (mytime.minute * 60);
+                                //Correction (in seconds)
                                 DeviceToGPSTimeCorrection = (GpsSec + (GpsMin * 60)) - DeviceTime;
                                 //Debug
                                 //							Processor.APRSwindow += " Device Time is :" + mytime.minute + ":" + mytime.second + "\n";
@@ -2064,6 +2066,7 @@ public class AndPskmail extends AppCompatActivity {
                             imm.hideSoftInputFromWindow(connectDialogView.getWindowToken(), 0);
                             //Send the connect command
                             Processor.Connecting = true;
+                            Processor.connectingPhase = true;
                             if (serverAccessPassword.length() == 0) {
                                 Processor.Status = "Connecting";
                             } else {
