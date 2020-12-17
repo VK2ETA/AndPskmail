@@ -684,9 +684,10 @@ public class arq {
         			   Processor.TxModem == modemmodeenum.PSK125R   )) {
         		   send_txrsid_command("ON");
         		   rxRsidCounter = 0;
-        	   } else if (rxRsidCounter > 0 && (Processor.TxModem == modemmodeenum.MFSK8 ||
+        	   } else if (rxRsidCounter > 0 && (
+        	           Processor.TxModem == modemmodeenum.MFSK8  ||
         			   Processor.TxModem == modemmodeenum.MFSK16 ||
-                       Processor.TxModem == modemmodeenum.PSK63 ||
+                       Processor.TxModem == modemmodeenum.PSK63  ||
         			   Processor.TxModem == modemmodeenum.PSK31   )) {
         		   send_txrsid_command("ON");
         		   rxRsidCounter = 0;

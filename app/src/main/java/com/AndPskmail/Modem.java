@@ -597,7 +597,6 @@ my %modelist = ("0" => "default",
                             Processor.TXID = false;
                             TxRSID.send();
                         }
-
                         if (Processor.TxModem.toString().startsWith("PSK")) {
                             TXMpsk.AddBytes(TxSendline.getBytes());
                         } else if (Processor.TxModem.toString().startsWith("MFSK")) {
@@ -607,6 +606,8 @@ my %modelist = ("0" => "default",
                         } else {
                             loggingclass.writelog("Wrong TX Mode called: " + Processor.TxModem.toString() , null, true);
                         }
+                        //Reset TxRSID as it is OFF by default and needs to be enabled when required
+                        Processor.q.send_txrsid_command("OFF");
                         //Restart modem reception
                         unPauseRxModem();
                         Processor.TXActive = false;

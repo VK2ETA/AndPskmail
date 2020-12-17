@@ -39,8 +39,8 @@ import android.os.IBinder;
  */
 public class Processor extends Service{
 
-	static String application ="AndPskmail 1.2.3"; // Used to preset an empty status
-	static String version = "Version 1.2.3, 2020-12-15";
+	static String application ="AndPskmail 1.2.4"; // Used to preset an empty status
+	static String version = "Version 1.2.4, 2020-12-17";
 	//public static int RxFrequencyOffset = 0;
 	//public static boolean showallcharacters = false; //debugging
 	public static boolean justReceivedRSID = false;
@@ -226,7 +226,7 @@ static String[] AltModes = {"       ","THOR8","MFSK16","THOR22",
 
 
 	/**
-	 * @param args the command line arguments
+	 * @param //args the command line arguments
 	 */
 	//   public static void main(String[] args) throws InterruptedException {
 	public static void processor() {
@@ -460,6 +460,8 @@ static String[] AltModes = {"       ","THOR8","MFSK16","THOR22",
 						catch (IOException e) {
 							Logger.getLogger(Processor.class.getName()).log(Level.SEVERE, null, e);
 						}
+						//VK2ETA added to cleanup the session information
+						sm.initSession();
 						q.send_rsid_command("OFF");
 						// ident block
 					} else if (rxb.session.equals(session) & rxb.type.equals("i")) {
@@ -526,6 +528,7 @@ static String[] AltModes = {"       ","THOR8","MFSK16","THOR22",
 
 				}
 
+				/* Old version for PERL server only
 				if (!Connected & Blockline.contains("QSL") & Blockline.contains(q.callsign)) {  
 					//Display in APRS Window, even if not valid block
 					//Processor.APRSwindow += "\n" + Blockline + "\n";
@@ -538,7 +541,7 @@ static String[] AltModes = {"       ","THOR8","MFSK16","THOR22",
 					if (msc.lookingAt()) {
 						scall = msc.group(1);
 						pCheck = msc.group(2);
-						q.send_txrsid_command("OFF");
+						//q.send_txrsid_command("OFF");
 						Thread.sleep(500);
 						//                                        q.send_mode_command(defaultmode);
 					} 
@@ -558,16 +561,73 @@ static String[] AltModes = {"       ","THOR8","MFSK16","THOR22",
 								break;
 							}
 						}
-						/* VK2ETA Not yet                                        if (!knownserver) {
-                           mainui.addServer(scall); // add to servers drop down list
+						// VK2ETA Not yet                                        if (!knownserver) {
+                           //mainui.addServer(scall); // add to servers drop down list
                                         }
-						 */                                
+						 //
 						// switch off txrsid
 						q.send_txrsid_command("OFF");
 					}
 				}
+		        */
 
-				if (!Connected & Blockline.contains(":71 ")) {
+				//New version for Perl AND Java Server
+                if (!Connected & Blockline.contains("QSL") & Blockline.contains(q.callsign)) {
+                    String pCheck = "";
+                    //Pattern psc = Pattern.compile(".*de ([A-Z0-9\\-]+)\\s(?:(\\d*)|((\\d+)\\s+(\\d+))\\s)([0123456789ABCDEF]{4}).*");
+                    Pattern psc = Pattern.compile(".*de ([A-Z0-9\\-]+)\\s*(?:(?:(\\d+\\s)(\\d+\\s))|(\\d*\\s))([0123456789ABCDEF]{4}).*");
+                    Matcher msc = psc.matcher(Blockline);
+                    String scall = "";
+                    String rx_snr = "";
+                    String numberOfMails = "";
+                    if (msc.lookingAt()) {
+                        scall = msc.group(1);
+                        if (msc.group(4) != null) {
+                            rx_snr = msc.group(4).trim();
+                        } else {
+                            rx_snr = msc.group(2).trim();
+                            numberOfMails = msc.group(3).trim();
+                        }
+                        pCheck = msc.group(5);
+                    }
+                    // fill the servers drop down list
+                    char soh = 1;
+                    String sohstr = Character.toString(soh);
+                    String checkstring = "";
+                    String displayString = "";
+                    if (rx_snr.equals("")) {
+                        checkstring = sohstr + "00uQSL " + q.callsign + " de " + scall + " ";
+                    } else if (!rx_snr.equals("") && !numberOfMails.equals("")) {
+                        checkstring = sohstr + "00uQSL " + q.callsign + " de " + scall + " " + rx_snr + " " + numberOfMails + " ";
+                        //System.out.println("RX_SNR:" + rx_snr);
+                        displayString = "From " + scall + ": " + rx_snr + "%, " + numberOfMails + " mails\n";
+                        //setrxdata(scall, Integer.parseInt(rx_snr));
+                    } else if (!rx_snr.equals("") && numberOfMails.equals("")) {
+                        checkstring = sohstr + "00uQSL " + q.callsign + " de " + scall + " " + rx_snr + " ";
+                        //System.out.println("RX_SNR:" + rx_snr);
+                        displayString = "From " + scall + ": " + rx_snr + "%\n";
+                        //setrxdata(scall, Integer.parseInt(rx_snr));
+                    }
+                    //Display in APRS Window, even if not valid block
+                    Processor.APRSwindow += "\n" + displayString;
+                    AndPskmail.mHandler.post(AndPskmail.addtoAPRS);
+                    String check = q.checksum(checkstring);
+                    if (check.equals(pCheck)) {
+                        rxb.get_serverstat(scall);
+                        int i = 0;
+                        boolean knownserver = false;
+                        for (i = 0; i < 10; i++) {
+                            //                              System.out.println(Servers[i] + scall);
+                            if (scall.equals(Servers[i])) {
+                                knownserver = true;
+                                break;
+                            }
+                        }
+                        //if (!knownserver) {
+                            //Android, not yet mainui.addServer(scall); // add to servers drop down list
+                        //}
+                    }
+                } else if (!Connected & Blockline.contains(":71 ")) {
 					Pattern psc = Pattern.compile(".*00u(\\S+):71\\s([0123456789ABCDEF]{4}).*");
 					Matcher msc = psc.matcher(Blockline);
 					String scall = "";
@@ -980,7 +1040,7 @@ static String[] AltModes = {"       ","THOR8","MFSK16","THOR22",
 
 	/**
 	 * Add a server to the array of known servers, for instance as written by the user
-	 * @param MyServer
+	 * //@param MyServer
 	 */
 	public static void AddServerToArray(String myServer){           
 		try {

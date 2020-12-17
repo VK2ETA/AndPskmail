@@ -225,16 +225,16 @@ public class RXBlock{
                             Processor.linked = true;
                             Processor.linkedserver = linkserver;
                             Processor.sending_link = 0;
-//Check logic here                            myarq.send_mode_command(Main.defaultmode); 
+                            //Check logic here                            myarq.send_mode_command(Main.defaultmode);
                             myarq.Message("Linked to " + linkserver, 10);
                             // switch off rsid
-                           myarq.send_rsid_command("OFF");  
-//                           Thread.sleep(500);
-                           myarq.send_txrsid_command("OFF"); 
-//                           Thread.sleep(500);
-  //                      } catch (InterruptedException ex) {
- //                           Logger.getLogger(RXBlock.class.getName()).log(Level.SEVERE, null, ex);
-//                        }
+                            //myarq.send_rsid_command("OFF");
+                            //                           Thread.sleep(500);
+                           //myarq.send_txrsid_command("OFF");
+                            //                           Thread.sleep(500);
+                            //                      } catch (InterruptedException ex) {
+                            //                           Logger.getLogger(RXBlock.class.getName()).log(Level.SEVERE, null, ex);
+                            //                        }
                    }
                     get_serverstat(linkserver);
                 }
