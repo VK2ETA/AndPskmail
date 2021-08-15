@@ -1,7 +1,7 @@
 /*
  * Processor.java
  *
- * Copyright (C) 2008 P�r Crusefalk and Rein Couperus
+ * Copyright (C) 2008 Per Crusefalk and Rein Couperus
  * Adapted for Android by John Douyere (VK2ETA)
  *
  * This program is distributed in the hope that it will be useful,
@@ -32,15 +32,11 @@ import android.content.Intent;
 import android.os.Environment;
 import android.os.IBinder;
 
-/**
- *
- * @author Per jPskmail Main.java 
- * 
- */
+
 public class Processor extends Service{
 
-	static String application ="AndPskmail 1.2.4"; // Used to preset an empty status
-	static String version = "Version 1.2.4, 2020-12-17";
+	static String application ="AndPskmail 1.2.5"; // Used to preset an empty status
+	static String version = "Version 1.2.5, 2021-08-11";
 	//public static int RxFrequencyOffset = 0;
 	//public static boolean showallcharacters = false; //debugging
 	public static boolean justReceivedRSID = false;
@@ -517,7 +513,7 @@ static String[] AltModes = {"       ","THOR8","MFSK16","THOR22",
 								Processor.TX_Text += "~Mp" + output + "\n";
 							}
 						} else {
-							Pattern pps = Pattern.compile(".*"+q.servercall+" V(\\d{1,2}\\.\\d{1,2}\\.\\d{1,2}),\\sHi.*");
+							Pattern pps = Pattern.compile(".*"+q.servercall+" V(\\d{1,2}\\.\\d{1,2}\\.\\d{1,2})(.\\d{1,2}){0,1}, Hi.*");
 							//System.out.println(Blockline);
 							Matcher mps = pps.matcher(Blockline);
 							if (mps.lookingAt()) {

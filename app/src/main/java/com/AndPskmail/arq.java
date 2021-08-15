@@ -1,7 +1,7 @@
 /*
  * arq.java
  *
- * Copyright (C) 2008 P�r Crusefalk (SM0RWO)
+ * Copyright (C) 2008 Per Crusefalk (SM0RWO)
  * Adapted to Android by John Douyere (VK2ETA)
  *
  * This program is distributed in the hope that it will be useful,

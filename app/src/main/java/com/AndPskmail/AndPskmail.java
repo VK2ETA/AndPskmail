@@ -1,5 +1,5 @@
 /*
- * AndPskmailActivity.java  
+ * AndPskmail.java
  *   
  * Copyright (C) 2011 John Douyere (VK2ETA)  
  *   

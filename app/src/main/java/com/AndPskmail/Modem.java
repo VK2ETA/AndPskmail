@@ -2,7 +2,7 @@
  * Modem.java
  *
  * Copyright (C) 2011 John Douyere (VK2ETA) - for Android platforms
- * Copyright (C) 2008 P�r Crusefalk and Rein Couperus
+ * Copyright (C) 2008 Per Crusefalk and Rein Couperus
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of

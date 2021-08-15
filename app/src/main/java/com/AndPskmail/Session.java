@@ -1,7 +1,7 @@
 /*
  * Session.java
  *
- * Copyright (C) 2008 P�r Crusefalk and Rein Couperus
+ * Copyright (C) 2008 Per Crusefalk and Rein Couperus
  * Adapted for Android by John Douyere (VK2ETA)
  *
  * This program is distributed in the hope that it will be useful,
