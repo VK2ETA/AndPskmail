@@ -49,11 +49,36 @@ public class myPreferences extends PreferenceActivity {
 		AndPskmail.splistener = new SharedPreferences.OnSharedPreferenceChangeListener() {
 			public void onSharedPreferenceChanged(SharedPreferences prefs, String key) {
 				// Implementation
-				if (key.equals("RXMODE") || key.equals("AFREQUENCY") || key.equals("TXMODE") || key.equals("SLOWCPU")) {
+				if (key.equals("RXMODE") || key.equals("AFREQUENCY") || key.equals("TXMODE") || key.equals("SLOWCPU")
+					|| key.equals("CALL") || key.equals("SERVER")) {
 					AndPskmail.RXParamsChanged = true;
 				}
 
-/*
+				/*
+				if (key.equals("CALL")) {
+					//remove un-allowed characters
+					String cleanCall = AndPskmail.myconfig.getPreference("CALL", "N0CALL");
+					cleanCall = cleanCall.replaceAll("[^a-zA-Z0-9\\/\\-]", "");
+					if (cleanCall.trim().length() == 0) cleanCall = "N0CALL";
+					SharedPreferences.Editor editor = AndPskmail.mysp
+							.edit();
+					editor.putString("CALL",cleanCall);
+					// Commit the edits!
+					editor.commit();
+				}
+
+				if (key.equals("SERVER")) {
+					//remove un-allowed characters
+					String cleanCall = AndPskmail.myconfig.getPreference("SERVER", "N0CALL");
+					cleanCall = cleanCall.replaceAll("[^a-zA-Z0-9\\/\\-]", "");
+					if (cleanCall.trim().length() == 0) cleanCall = "N0CALL";
+					SharedPreferences.Editor editor = AndPskmail.mysp
+							.edit();
+					editor.putString("SERVER",cleanCall);
+					// Commit the edits!
+					editor.commit();
+				}
+
 				// Automatic Beacons
 				if (key.equals("BEACON")) {
 					boolean autobeacon = AndPskmail.myconfig.getPreferenceB("BEACON", false);

@@ -360,7 +360,7 @@
         android:title="User&apos;s Data" >
 
         <EditTextPreference
-            android:defaultValue="NOCAL"
+            android:defaultValue="N0CALL"
             android:key="CALL"
             android:summary="Client Callsign"
             android:title="My Callsign" >
@@ -368,7 +368,7 @@
 
         <EditTextPreference
             android:key="PASSWORD"
-            android:summary="For Severs V1.1 and above"
+            android:summary="For PERL Servers V1.1 and above"
             android:title="Session Password"
             android:inputType="textPassword">
         </EditTextPreference>

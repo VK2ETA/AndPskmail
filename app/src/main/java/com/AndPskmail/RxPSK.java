@@ -202,7 +202,7 @@ public class RxPSK {
     	//  passband is increased slightly as mentioned above).
     	//  - Gaussian noise sensitivity is same as with 64 taps version as expected.
     	//  - CPU load reduction is around 30% on an HTC Desire (Android version 2.1 - no JIT compiler).
-    	//  - Integrer rather than Double floating point calculations does not 
+    	//  - Integer rather than Double floating point calculations does not
     	//  improve CPU load at all on an HTC Desire (Android version 2.1 - no JIT compiler)
     	//
 

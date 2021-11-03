@@ -1,6 +1,6 @@
 /*
  * AndPskmail.java
- *   
+ *
  * Copyright (C) 2011 John Douyere (VK2ETA)  
  *   
  * This program is distributed in the hope that it will be useful,  
@@ -68,6 +68,7 @@ import android.text.Editable;
 import android.text.Html;
 import android.text.TextWatcher;
 import android.text.format.Time;
+import android.util.Log;
 import android.view.Display;
 import android.view.GestureDetector;
 import android.view.GestureDetector.SimpleOnGestureListener;
@@ -281,7 +282,7 @@ public class AndPskmail extends AppCompatActivity {
 
 
         public void onLocationChanged(Location location) {
-            //        Log.i("TestGPSOnSecondThread", "onLocationChanged, location = " + 			location);
+                    Log.i("TestGPSOnSecondThread", "onLocationChanged, location = " + 			location);
         }
 
         public void onProviderDisabled(String provider) {
@@ -1212,9 +1213,10 @@ public class AndPskmail extends AppCompatActivity {
             myHandler.postDelayed(sendAndRequeueLink, nextBeaconOrLinkDelay(false));
         }
 
-        //Set server  call to default
-        //No: Let the first connect set the variable as we have an access password to initialise too possibly
-        // serverToCall = AndPskmail.myconfig.getPreference("SERVER");
+        //Set server call to default
+        //Needed if autolink is enabled at program start (or selected before we perform a manual Link/Inquire/Connect).
+        serverToCall = AndPskmail.myconfig.getPreference("SERVER");
+        serverAccessPassword = AndPskmail.myconfig.getPreference("SERVERACCESSPASSWORD");
 
         returnToLastScreen(); //Defaults to terminal screen
 
@@ -1244,6 +1246,19 @@ public class AndPskmail extends AppCompatActivity {
 
         // Re-initilize modem when NOT in a SESSION to use the latest parameters
         if (!Processor.Connected && !Processor.Connecting && RXParamsChanged) {
+            //Clean callsigns by removing un-allowed characters
+            String cleanCall = AndPskmail.myconfig.getPreference("CALL", "N0CALL");
+            cleanCall = cleanCall.replaceAll("[^a-zA-Z0-9\\/\\-]", "");
+            if (cleanCall.trim().length() == 0) cleanCall = "N0CALL";
+            SharedPreferences.Editor editor = AndPskmail.mysp.edit();
+            editor.putString("CALL",cleanCall);
+            cleanCall = AndPskmail.myconfig.getPreference("SERVER", "N0CALL");
+            cleanCall = cleanCall.replaceAll("[^a-zA-Z0-9\\/\\-]", "");
+            if (cleanCall.trim().length() == 0) cleanCall = "N0CALL";
+            editor.putString("SERVER",cleanCall);
+            // Commit the edits!
+            editor.commit();
+
             // Reset flag then stop and restart modem
             RXParamsChanged = false;
             //Cycle modem service off then on
@@ -2282,6 +2297,8 @@ public class AndPskmail extends AppCompatActivity {
                     try {
                         Processor.TX_Text += "~STOP:"
                                 + Processor.sm.Transaction + "\n";
+                        //Must clear the receive session blocks otherwise we can have permanently missing blocks
+                        Processor.sm.justSentStopCmd = true;
                         topToastText("Sending STOP command...");
                     }
                     catch (Exception ex) {
@@ -2464,7 +2481,7 @@ public class AndPskmail extends AppCompatActivity {
 
         // Initialize the AutoBeacon check box
         checkbox = (CheckBox) findViewById(R.id.autobeacon);
-        boolean autobeacon = AndPskmail.myconfig.getPreferenceB("BEACON", false);
+        boolean autobeacon = myconfig.getPreferenceB("BEACON", false);
         checkbox.setChecked(autobeacon);
         checkbox.setOnClickListener(new OnClickListener() {
             public void onClick(View v) {
@@ -2472,8 +2489,8 @@ public class AndPskmail extends AppCompatActivity {
                     //Store preference
                     storePreferenceB("BEACON", true);
                     //Remove one minute for the GPS fix
-                    AndPskmail.myHandler.postDelayed(AndPskmail.prepareGPSforBeacon,
-                            AndPskmail.nextBeaconOrLinkDelay(true) - 60000);
+                    myHandler.postDelayed(AndPskmail.prepareGPSforBeacon,
+                            nextBeaconOrLinkDelay(true) - 60000);
                     Processor.PostToAPRS("\n-> Next Beacon at : "  + nextBeaconTime.format("%H:%M:%S") + "\n");
                     if (!locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)){
                         Processor.PostToAPRS("\n**** WARNING: the GPS is OFF ****\n");
@@ -2491,14 +2508,14 @@ public class AndPskmail extends AppCompatActivity {
 
         // Initialize the AutoLink check box
         checkbox = (CheckBox) findViewById(R.id.autolink);
-        boolean autolink = AndPskmail.myconfig.getPreferenceB("AUTOLINK", false);
+        boolean autolink = myconfig.getPreferenceB("AUTOLINK", false);
         checkbox.setChecked(autolink);
         checkbox.setOnClickListener(new OnClickListener() {
             public void onClick(View v) {
                 if (((CheckBox) v).isChecked()) {
                     //Store preference
                     storePreferenceB("AUTOLINK", true);
-                    AndPskmail.myHandler.postDelayed(AndPskmail.sendAndRequeueLink, AndPskmail.nextBeaconOrLinkDelay(false));
+                    myHandler.postDelayed(AndPskmail.sendAndRequeueLink, AndPskmail.nextBeaconOrLinkDelay(false));
                     Processor.PostToAPRS("\n-> Next Auto Link at : "  + nextAutolinkTime.format("%H:%M:%S") + "\n");
                 } else {
                     //Store preference
@@ -2705,7 +2722,7 @@ public class AndPskmail extends AppCompatActivity {
                 if (Processor.Connected) {
                     try {
                         topToastText("Getting list of messages from the web...");
-                        Processor.TX_Text += "~/~GETMSG\n";
+                        Processor.TX_Text += "~GETMSG\n";
                     }
                     catch (Exception ex) {
                         // System.out.println(ex.getMessage());

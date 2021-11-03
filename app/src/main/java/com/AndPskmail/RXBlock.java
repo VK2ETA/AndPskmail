@@ -7,6 +7,7 @@ package com.AndPskmail;
 
 
 import java.io.IOException;
+import java.util.Locale;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.Pattern;
@@ -187,8 +188,8 @@ public class RXBlock{
        // unproto Blocks
        if ( type.equals( "u")) {
     	   //Display in APRS screen even if crc is bad
-    	   Processor.APRSwindow += payload + "\n";
-    	   AndPskmail.mHandler.post(AndPskmail.addtoAPRS);
+    	   //Processor.APRSwindow += payload + "\n";
+    	   //AndPskmail.mHandler.post(AndPskmail.addtoAPRS);
 
            // server beacon? 00uIS0GRB-3:72
            if (inString.contains("71") | inString.contains("72") | inString.contains("26")) {
@@ -220,7 +221,7 @@ public class RXBlock{
                if (mla.lookingAt()) {
                     linkserver = mla.group(1);
                     linkcall = mla.group(2);
-                 if (linkcall.equals(AndPskmail.myconfig.getPreference("CALL"))) {
+                 if (linkcall.toUpperCase(Locale.US).equals(AndPskmail.myconfig.getPreference("CALL").toUpperCase(Locale.US))) {
 //                        try {
                             Processor.linked = true;
                             Processor.linkedserver = linkserver;
@@ -283,39 +284,40 @@ public class RXBlock{
        return payload;
     }
 
-    void get_serverstat (String server) {
-              // get the time for MH.
-              // Make calendar object
-                                    Calendar cal = Calendar.getInstance();
-                                    int Hour = cal.get(Calendar.HOUR_OF_DAY);
-                                    int Minute = cal.get(Calendar.MINUTE);                                                                                                                                                                                                                                                                                                                                                                                                                   String formathour = "0" + Integer.toString(Hour);
-                                    formathour = formathour.substring(formathour.length() - 2);
-                                    String formatminute = "0" + Integer.toString(Minute);
-                                    formatminute = formatminute.substring(formatminute.length() - 2);
-                                    String lh = formathour  + ":" + formatminute;
-                                        int i;
-                                        boolean knownserver = false;
-                                        for (i = 0; i <10; i++) {
-                                            if (server.equals(Processor.Servers[i])) {
-                                                knownserver = true;
-                                                Processor.SNR[i] = Processor.snr;
-                                                Processor.Lastheard[i] =  lh;
-                                                Processor.packets_received[i]++;
-                                                break;
-                                            }
-                                        }
-                                        if (!knownserver) {
-                                            for (i = 0; i <10; i++) {
-                                                if (Processor.Servers[i].equals("")) {
-                                                    Processor.Servers[i] = server;
-                                                    Processor.SNR[i] = Processor.snr;
-                                                    Processor.Lastheard[i] =  lh;
-                                                    Processor.packets_received[i]++;
-//JD Not yet                                                    Main.mainui.addServer(server);
-                                                    break;
-                                                }
-                                            }
-                                        }
+    void get_serverstat(String server) {
+        // get the time for MH.
+        // Make calendar object
+        Calendar cal = Calendar.getInstance();
+        int Hour = cal.get(Calendar.HOUR_OF_DAY);
+        int Minute = cal.get(Calendar.MINUTE);
+        String formathour = "0" + Integer.toString(Hour);
+        formathour = formathour.substring(formathour.length() - 2);
+        String formatminute = "0" + Integer.toString(Minute);
+        formatminute = formatminute.substring(formatminute.length() - 2);
+        String lh = formathour + ":" + formatminute;
+        int i;
+        boolean knownserver = false;
+        for (i = 0; i < 10; i++) {
+            if (server.equals(Processor.Servers[i])) {
+                knownserver = true;
+                Processor.SNR[i] = Processor.snr;
+                Processor.Lastheard[i] = lh;
+                Processor.packets_received[i]++;
+                break;
+            }
+        }
+        if (!knownserver) {
+            for (i = 0; i < 10; i++) {
+                if (Processor.Servers[i].equals("")) {
+                    Processor.Servers[i] = server;
+                    Processor.SNR[i] = Processor.snr;
+                    Processor.Lastheard[i] = lh;
+                    Processor.packets_received[i]++;
+                    //JD Not yet                                                    Main.mainui.addServer(server);
+                    break;
+                }
+            }
+        }
 
     }
 

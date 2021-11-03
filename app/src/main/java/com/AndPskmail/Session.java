@@ -68,7 +68,7 @@ public class Session {
 	private static  String rx_lastreceived;   // Last block I received
 	public static   String rx_missing; //List of repeat requests I need to send to other side
 	private static   boolean rx_lastBlock; // Flag for end of frame
-
+	public static boolean justSentStopCmd = false;
 	private static String[] rxbuffer = new String[64];
 	private static int goodblock;
 	private static int thisblock;
@@ -235,17 +235,14 @@ public class Session {
 			runvar = lastblock;
 		}
 
-		for (i =lastdisplayed + 1; i <= runvar; i++){
+		for (i = lastdisplayed + 1; i <= runvar; i++) {
 			index = i % 64;
-
-			if (rxbuffer[index].equals("")){              ;
-
-			char m = (char) (index + 32);
-			rx_missing += Character.toString(m);
-			} 
+			if (rxbuffer[index].equals("")) {
+				char m = (char) (index + 32);
+				rx_missing += Character.toString(m);
+			}
 		}
-		// generate the status block      
-
+		// generate the status block
 		if (rx_missing.length() == 0) {
 			Processor.rxbusy = false;
 		} else {
@@ -261,9 +258,29 @@ public class Session {
 		if (rx_missing.length() > 8) {
 			rx_missing = rx_missing.substring(0,8);
 		}
+
+		if (justSentStopCmd) {
+			rx_ok = rx_lastreceived = tx_lastsent;
+			rx_missing = "";
+			lastdisplayed = lastblock;
+			lastgoodblock_received = lastblock;
+			for (int j=0; j<64; j++) {
+				rxbuffer[j]="";
+			}
+		}
 		String outstr = rx_lastsent + rx_ok + rx_lastreceived + rx_missing;
 		return outstr;
 	}
+
+    //Reset STOP command flag provided the server has received our STOP command
+	public void checkStopFlag() {
+	    if (tx_ok.equals(rx_lastsent)) {
+            //Reset flag
+            justSentStopCmd = false;
+            //Abort all receiving transactions
+			abortAllRxTransactions();
+        }
+    }
 
 	public String getRXmissing(){
 		rx_missing = "";
@@ -289,14 +306,13 @@ public class Session {
 		return(tx_lastsent + rx_lastsent);    //Last block sent to me  + Last block I sent
 	}
 
-	//Used in Main loop for measuring the link quality (from a data perspective)
-	//public double RXGoodBlocksRatio() {
-	//rx is my machine, tx is the other machine
 
-
-	//  return(1);
-	// }
-
+	//Called when we issue a STOP command
+	public void resetRxBlocks() {
+		rx_lastreceived = rx_lastsent;
+		//rx_ok = " ";
+		rx_missing = "";
+	}
 
 	public void initSession(){
 		tx_lastsent = " ";
@@ -343,22 +359,15 @@ public class Session {
 			if (thisblock  > lastgoodblock_received | (lastgoodblock_received - thisblock) > (64 - 24) ) {
 				lastgoodblock_received = thisblock;
 			} 
-
-			while(!rxbuffer[(lastdisplayed+1) % 64].equals("")  ){
+			//
+			while(!rxbuffer[(lastdisplayed+1) % 64].equals("")){
 				// display this block
-
 				lastdisplayed++;
 				lastdisplayed %= 64;
-
 				// set goodblock
-
 				goodblock = lastdisplayed;
-
-
-
 				if ((lastdisplayed  > lastgoodblock_received) | (lastgoodblock_received - lastdisplayed) > (64 - 17)
 						| (lastdisplayed == 0 & thisblock == 0)) {
-
 					lastgoodblock_received = thisblock;
 				} 
 				// output to main window
@@ -374,41 +383,28 @@ public class Session {
 						Logger.getLogger(Processor.class.getName()).log(Level.SEVERE, null, ex);
 					}
 				}
-
 				if (! rxbuffer[lastdisplayed].startsWith("~FA:")) {
 					Processor.PostToTerminal(rxbuffer[lastdisplayed]);
 				}
-
-
-
 				// parse commands
 				Lineoutstring += rxbuffer[lastdisplayed];
-
 				int Linebreak = -1;
 				while (Lineoutstring.indexOf("\n") >= 0) {
 					Linebreak = Lineoutstring.indexOf("\n");
 					if (Linebreak  >= 0) {
 						String fullLine = Lineoutstring.substring(0,Linebreak);
 						Lineoutstring = Lineoutstring.substring(Linebreak + 1);
-
 						parseInput(fullLine);
-
 					}
-
 				}
-
 			}
-
 			// make room for more data
 			if (lastdisplayed == lastgoodblock_received) {
 				int i = 0;
-				for (i = lastdisplayed + 8 ; i < lastdisplayed + 32; i++){
+				for (i = lastdisplayed + 8; i < lastdisplayed + 32; i++){
 					rxbuffer[i % 64] = "";
 				}
 			}
-
-
-
 		}
 
 		return "";
@@ -416,7 +412,7 @@ public class Session {
 
 	public void parseInput(String str) throws NoClassDefFoundError, FileNotFoundException, IOException, Exception{
 		boolean Firstline = false;
-		/* NO TTY Server function for now      
+		/* NO TTY Server function for now
        // ~QUIT for TTY session...
                                 Pattern TTYm = Pattern.compile("^\\s*~QUIT");
                                      Matcher tm = TTYm.matcher(str);
@@ -579,6 +575,16 @@ public class Session {
                                       }
                                     }
 		 */
+
+		//Server initiated QUIT, just send back a ~QUIT to server which will disconnect
+		Pattern TTYm = Pattern.compile("^\\s*~QUIT");
+		Matcher tm = TTYm.matcher(str);
+		if (tm.lookingAt()) {
+		//	Main.disconnect = true;
+		//	Main.log ("Disconnect request from " + Main.TTYCaller);
+		//} else if (tm.lookingAt()) {
+			Processor.TX_Text = "~QUIT\n";
+		}
 
 		// APRS positions
 		//P14,PE1FTV,51.35300,5.38517
@@ -914,8 +920,9 @@ public class Session {
 		}
 
 
-		// >FO5:PI4TUE:PA0R:JhyJkk:f:test.txt:496
-		Pattern ofr = Pattern.compile(">FO(\\d):([A-Z0-9\\-]+):([A-Z0-9\\-]+):([A-Za-z0-9_-]+):(\\w)");
+		// >FO5:PI4TUE:PA0R:JhyJkk:f          //:test.txt:496
+		// >FO5:vk2eta-1:vk2eta/m:b507b9:w    //::1414
+		Pattern ofr = Pattern.compile(">FO(\\d):([a-zA-Z0-9\\-\\/]+):([a-zA-Z0-9\\-\\/]+):([A-Za-z0-9_-]+):(\\w)");
 		Matcher ofrm = ofr.matcher(str);
 		if (ofrm.lookingAt()) {
 			if (ofrm.group(5).equals("f") | ofrm.group(5).equals("w") | ofrm.group(5).equals("m")) {
@@ -1817,135 +1824,7 @@ public class Session {
 				Transaction = "";
 
 			} else if (me.group(1).equals("-abort-")) {
-				if (Headers) {
-					Headers = false;
-					DataReceived = 0;
-					Processor.DataSize = Integer.toString(0);
-
-					/*                                                try {
-                                                        this.headers.close();
-                                                        Main.mainui.refreshHeaders();
-                                                 } catch (IOException ex) {
-                                                      Main.log.writelog("Error when trying to close the headers file.", ex, true);
-                                                 }
-					 */
-				}
-
-				if (FileList) {
-					FileList = false;
-				}
-
-				if (FileDownload){
-					FileDownload = false;
-					Processor.comp = false;
-
-					try {
-						this.dlFile.close();
-						File df = new File(Processor.HomePath + Processor.Dirprefix + "TempFile");
-						if (df.exists()) {
-							boolean scs = df.delete();
-						}
-
-					} catch (IOException ex) {
-						loggingclass.writelog("Error when trying to close the download file.", ex, true);
-					}
-
-					try {
-						File tmp = new File (Processor.HomePath + Processor.Dirprefix + "Pending" + Processor.Separator + Transaction);
-						if (tmp.exists()){
-							tmp.delete();
-						}
-
-						Processor.TX_Text += "~FA:" + Transaction + "\n";
-
-						Processor.Progress = 0;
-
-					}
-					catch (Exception exc){
-						loggingclass.writelog("Error when trying to decode the downoad file.", exc, true);
-					}
-					catch (NoClassDefFoundError exp) {
-						a.Message("problem decoding B64 file", 10);
-					}
-					File tmp = new File(Processor.HomePath + Processor.Dirprefix + "TempFile");
-					boolean success = tmp.delete();
-
-					try {
-						if (pFile != null) {
-							Processor.sm.pFile.close();
-							Processor.sm.Trfile.delete();
-						}
-					} catch (IOException ex) {
-						loggingclass.writelog("Error when trying to close the pending file.", ex, true);
-					}
-					Processor.Progress = 0;
-
-					//                                                    Main.log(ThisFile + " received");
-
-				}
-				// messages  download      - append tmpmessage to Inbox in mbox format
-				if (MsgDownload) {
-					MsgDownload = false;
-					this.tmpmessage.close();
-					// append to Inbox file
-					FileReader fr = new FileReader("tmpmessage");
-
-					File fl = new File(Processor.HomePath + Processor.Dirprefix + "tmpmessage");
-					if (fl.exists()) {
-						fl.delete();
-					}
-
-				}
-				// compressed messages  download      - append tmpmessage to Inbox in mbox format
-				if (CMsgDownload) {
-					CMsgDownload = false;
-					Processor.comp = false;
-					tmpmessage.close();
-					// append to Inbox file
-					File fl = new File(Processor.HomePath + Processor.Dirprefix + "tmpmessage");
-					if (fl.exists()) {
-						fl.delete();
-					}
-
-					File pending = new File (Processor.HomePath + Processor.Dirprefix + "Pending" + Processor.Separator + Transaction);
-					if (pending.exists()) {
-						pending.delete();
-					}
-				}
-				// compressed web pages download
-				if (CwwwDownload) {
-					CwwwDownload = false;
-					Processor.comp = false;
-
-					try {
-						this.dlFile.close();
-					} catch (IOException ex) {
-						loggingclass.writelog("Error when trying to close the download file.", ex, true);
-					}
-
-
-
-					File tmp = new File(Processor.HomePath + Processor.Dirprefix + "TempFile");
-					boolean success = tmp.delete();
-
-					try {
-						if (pFile != null) {
-							Processor.sm.pFile.close();
-							Processor.sm.Trfile.delete();
-						}
-					} catch (IOException ex) {
-						loggingclass.writelog("Error when trying to close the pending file.", ex, true);
-					}
-					Processor.Progress = 0;
-				}
-
-				// web pages   download
-				if (WWWDownload) {
-					WWWDownload = false;
-				}
-				a.Message("done...", 10);
-				Processor.Progress = 0;
-				Transaction = "";
+				abortAllRxTransactions();
 			}
 		}    
 		// NNNN 
@@ -2188,7 +2067,8 @@ public class Session {
 
 			char lasttxchar = (char) (lastqueued + 32);
 			rx_lastsent = Character.toString(lasttxchar);
-			Processor.myrxstatus = getTXStatus();
+			//VK2ETA - Moved after the loop to enable proper processing of STOP command situation
+			//Processor.myrxstatus = getTXStatus();
 			Outbuffer += block;
 			i++;
 			lastqueued += 1;
@@ -2196,6 +2076,8 @@ public class Session {
 				lastqueued = 0;
 			}       
 		}
+		//VK2ETA moved here (see above)
+		Processor.myrxstatus = getTXStatus();
 
 		return Outbuffer;
 	}
@@ -2407,13 +2289,6 @@ public class Session {
 			} else {
 				Icon = "D";
 			}
-
-
-
-
-
-
-
 			// Fix stream id, this is wrong
 
 			returnframe = Tag + ">PSKAPR,qAs," + callsign + "*:!" + latstring + latsign + "/" + lonstring + lonsign + Icon;
@@ -2436,11 +2311,149 @@ public class Session {
 		return tmp/p;
 	}
 
-
-
 	public void debug(String message){
 		loggingclass.writelog("Debug: " + message , null, true);
 		System.out.println("Debug:" + message);
+	}
+
+	//Resets all receiving transactions (we received and -abort- OR we issued a STOP command as a client)
+	private void abortAllRxTransactions() {
+		if (Headers) {
+			Headers = false;
+			DataReceived = 0;
+			Processor.DataSize = Integer.toString(0);
+
+					/*                                                try {
+                                                        this.headers.close();
+                                                        Main.mainui.refreshHeaders();
+                                                 } catch (IOException ex) {
+                                                      Main.log.writelog("Error when trying to close the headers file.", ex, true);
+                                                 }
+					 */
+		}
+
+		if (FileList) {
+			FileList = false;
+		}
+
+		if (FileDownload){
+			FileDownload = false;
+			Processor.comp = false;
+
+			try {
+				this.dlFile.close();
+				File df = new File(Processor.HomePath + Processor.Dirprefix + "TempFile");
+				if (df.exists()) {
+					boolean scs = df.delete();
+				}
+
+			} catch (IOException ex) {
+				loggingclass.writelog("Error when trying to close the download file.", ex, true);
+			}
+
+			try {
+				File tmp = new File (Processor.HomePath + Processor.Dirprefix + "Pending" + Processor.Separator + Transaction);
+				if (tmp.exists()){
+					tmp.delete();
+				}
+
+				Processor.TX_Text += "~FA:" + Transaction + "\n";
+
+				Processor.Progress = 0;
+
+			}
+			catch (Exception exc){
+				loggingclass.writelog("Error when trying to decode the downoad file.", exc, true);
+			}
+			catch (NoClassDefFoundError exp) {
+				a.Message("problem decoding B64 file", 10);
+			}
+			File tmp = new File(Processor.HomePath + Processor.Dirprefix + "TempFile");
+			boolean success = tmp.delete();
+
+			try {
+				if (pFile != null) {
+					Processor.sm.pFile.close();
+					Processor.sm.Trfile.delete();
+				}
+			} catch (IOException ex) {
+				loggingclass.writelog("Error when trying to close the pending file.", ex, true);
+			}
+			Processor.Progress = 0;
+
+			//                                                    Main.log(ThisFile + " received");
+
+		}
+		// messages  download      - append tmpmessage to Inbox in mbox format
+		if (MsgDownload) {
+			MsgDownload = false;
+			try {
+				this.tmpmessage.close();
+				// append to Inbox file
+				FileReader fr = new FileReader("tmpmessage");
+
+				File fl = new File(Processor.HomePath + Processor.Dirprefix + "tmpmessage");
+				if (fl.exists()) {
+					fl.delete();
+				}
+			} catch (IOException ex) {
+				loggingclass.writelog("Error when trying to close the tmp message file.", ex, true);
+			}
+		}
+		// compressed messages  download      - append tmpmessage to Inbox in mbox format
+        if (CMsgDownload) {
+            CMsgDownload = false;
+            Processor.comp = false;
+            try {
+                tmpmessage.close();
+                // append to Inbox file
+                File fl = new File(Processor.HomePath + Processor.Dirprefix + "tmpmessage");
+                if (fl.exists()) {
+                    fl.delete();
+                }
+
+                File pending = new File(Processor.HomePath + Processor.Dirprefix + "Pending" + Processor.Separator + Transaction);
+                if (pending.exists()) {
+                    pending.delete();
+                }
+            } catch (IOException ex) {
+                loggingclass.writelog("Error when trying to close the tmp message file.", ex, true);
+            }
+        }
+		// compressed web pages download
+		if (CwwwDownload) {
+			CwwwDownload = false;
+			Processor.comp = false;
+
+			try {
+				this.dlFile.close();
+			} catch (IOException ex) {
+				loggingclass.writelog("Error when trying to close the download file.", ex, true);
+			}
+
+
+
+			File tmp = new File(Processor.HomePath + Processor.Dirprefix + "TempFile");
+			boolean success = tmp.delete();
+
+			try {
+				if (pFile != null) {
+					Processor.sm.pFile.close();
+					Processor.sm.Trfile.delete();
+				}
+			} catch (IOException ex) {
+				loggingclass.writelog("Error when trying to close the pending file.", ex, true);
+			}
+			Processor.Progress = 0;
+		}
+
+		// web pages   download
+		if (WWWDownload) {
+			WWWDownload = false;
+		}
+		a.Message("done...", 10);
+		Processor.Progress = 0;
+		Transaction = "";
 	}
 
 } // end of class
