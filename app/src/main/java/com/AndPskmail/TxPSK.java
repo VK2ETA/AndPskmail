@@ -70,7 +70,7 @@ public class TxPSK {
     private boolean tune;
     private int preamble;
 
-    public AudioTrack at = null; 
+    //public AudioTrack at = null;
     private int DCDOFF = 32;
     private double volume = 0.5;
     
@@ -270,7 +270,7 @@ public class TxPSK {
     	}
 
 		//Catch the stopTX flag at this point as well
-		if (!Modem.stopTX) at.write(outSbuffer, 0, symbollen);
+		if (!Modem.stopTX) Modem.txAudioTrack.write(outSbuffer, 0, symbollen);
 
     	// save the current symbol 
     	prevsymbol = symbol;
@@ -393,7 +393,8 @@ public class TxPSK {
 
 
     void AddBytes(byte[] by) {
-    	
+
+    	/* Done at higher level now
     	//JD check the multiplier value for the buffer size
         int intSize = 10 * android.media.AudioTrack.getMinBufferSize(8000,
         		AudioFormat.CHANNEL_CONFIGURATION_MONO, AudioFormat.ENCODING_PCM_16BIT);
@@ -415,7 +416,11 @@ public class TxPSK {
  	    //Launch TX
  	    at.setStereoVolume(1.0f,1.0f);
 	    at.play();
+		*/
+
         Txprocess(by); //Can be long running since it is in a worker's thread
+
+		/* Done at higher level now
 		//Stop audio track
 		at.stop();
 		//Wait for end of audio play to avoid 
@@ -429,6 +434,7 @@ public class TxPSK {
 			}
 		}
 	    at.release();
+	    */
 	    //Reset the stop flag if it was ON
 	    Modem.stopTX = false;
     }

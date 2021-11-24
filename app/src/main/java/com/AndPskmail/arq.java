@@ -168,9 +168,11 @@ public class arq {
             //JD: TO-DO Check if the display need to be is delayed until we 
             //   switch the receive off in Modem class, so that we do not 
             //   intermix with received characters
-            Processor.TXmonitor += "\n\n*TX*  " + "<SOH>" + montext + "<EOT>\n\n";
-    		//Delay posting until reception is completed for that Audio buffer
-            // AndPskmail.mHandler.post(AndPskmail.addtomodem);
+            //Processor.TXmonitor += "\n\n*TX*  " + "<SOH>" + montext + "<EOT>\n\n";
+            Modem.appendToModemBuffer("\n\n*TX*  " + "<SOH>" + montext + "<EOT>\n\n");
+            //Force immediate update of screen
+            AndPskmail.lastUpdateTime = 0L;
+            AndPskmail.mHandler.post(AndPskmail.updateModemScreen);
 
             //Display on APRS too if unproto TX
             if (montext.substring(4, 4).equals("u")) {
@@ -425,8 +427,7 @@ public class arq {
          callsign = AndPskmail.myconfig.getPreference("CALL");
          callsign = callsign.trim();
          //servercall = AndPskmail.myconfig.getPreference("SERVER");
-         servercall = AndPskmail.serverToCall;
-         servercall = servercall.trim();
+         servercall = AndPskmail.serverToCall.trim();
          //Change from default mode to currently selected mode (could 
          //  have been changed by the modeUP/Down button in the Modem screen
          //         backoff = AndPskmail.myconfig.getPreference("RXMODE");

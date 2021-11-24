@@ -25,7 +25,7 @@ import android.media.AudioTrack;
 public class TxRSID {
 
 
-    private static AudioTrack at = null; 
+    //private static AudioTrack at = null;
     
 	static final int RSID_NONE = -1;
 	static final double RSID_SAMPLE_RATE = 11025.0;
@@ -154,6 +154,7 @@ public class TxRSID {
 
     	int volumebits = Integer.parseInt(AndPskmail.myconfig.getPreference("VOLUME","8"));
 
+    	/* Done at higher level now
     	//JD check the multiplier value for the buffer size
         int intSize = 4 * android.media.AudioTrack.getMinBufferSize(8000,
         		AudioFormat.CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_16BIT);
@@ -169,6 +170,7 @@ public class TxRSID {
  	    //Open audiotrack
  	    at.setStereoVolume(1.0f,1.0f);
 	    at.play();
+	    */
 
 	    int[] rsid = new int[RSID_NSYMBOLS];
 
@@ -197,7 +199,7 @@ public class TxRSID {
 			}
 			//		active_modem->ModulateXmtr(outbuf, symlen);
 			//Catch the stopTX flag at this point 
-			if (!Modem.stopTX)  at.write(outbuf, 0, symlen);
+			if (!Modem.stopTX)  Modem.txAudioTrack.write(outbuf, 0, symlen);
 
 		}
 
@@ -208,14 +210,15 @@ public class TxRSID {
 		// transmit 6 symbol periods of silence at beginning of transmission
 		for (int i = 0; i < 6; i++) {
 			//Catch the stopTX flag at this point
-			if (!Modem.stopTX)  at.write(outbuf, 0, symlen);
+			if (!Modem.stopTX)  Modem.txAudioTrack.write(outbuf, 0, symlen);
 			//		active_modem->ModulateXmtr(outbuf, symlen);
 		}
 
+		/* Done at higher level now
 		//Close audio track
 		at.stop();
 	    at.release();
-
+		*/
 	}	
 }
 

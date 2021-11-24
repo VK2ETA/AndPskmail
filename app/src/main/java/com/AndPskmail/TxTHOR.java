@@ -23,7 +23,7 @@ public class TxTHOR {
 
 	double doublespacing = 1.0;
 
-	public AudioTrack at = null; 
+	//public AudioTrack at = null;
 	private double frequency;
 	private int volumebits;
 	private double bandwidth;
@@ -35,7 +35,6 @@ public class TxTHOR {
 	int txprevtone;
 	double[] outbuf;
 	double txphase;
-	//    static public SoundOutput soundout;
 	ViterbiEncoder Enc;
 	int bitshreg;
 	int bitstate;
@@ -141,7 +140,7 @@ public class TxTHOR {
 					txphase += TWOPI;
 			}
 			//Catch the stopTX flag at this point as well
-			if (!Modem.stopTX) at.write(outSbuffer, 0, adjSymlen);
+			if (!Modem.stopTX) Modem.txAudioTrack.write(outSbuffer, 0, adjSymlen);
 
 		}
 	}
@@ -248,6 +247,7 @@ void sendsecondary() {
 
 	void AddBytes(byte[] by) {
 
+		/* Now doen at higher level
 		//JD check the multiplier value for the buffer size
 		int intSize = 10 * android.media.AudioTrack.getMinBufferSize(8000,
 				AudioFormat.CHANNEL_CONFIGURATION_MONO, AudioFormat.ENCODING_PCM_16BIT);
@@ -263,7 +263,9 @@ void sendsecondary() {
 		//Launch TX
 		at.setStereoVolume(1.0f,1.0f);
 		at.play();
+		*/
 		Txprocess(by); //Can be long running since it is in a worker's thread
+		/* Now done at higher level
 		//Stop audio track
 		at.stop();
 		//Wait for end of audio play to avoid 
@@ -278,6 +280,7 @@ void sendsecondary() {
 		}
 		//Close audio track
 		at.release();
+		*/
 		//Reset the stop flag if it was ON
 		Modem.stopTX = false;
 	}

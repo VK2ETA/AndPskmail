@@ -35,10 +35,8 @@ import java.util.Random;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.zip.GZIPOutputStream;
-
 import android.Manifest;
 import android.annotation.SuppressLint;
-import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Notification;
 import android.app.NotificationChannel;
@@ -49,6 +47,7 @@ import android.bluetooth.BluetoothDevice;
 import android.content.BroadcastReceiver;
 import android.content.IntentFilter;
 import android.content.pm.PackageManager;
+import android.location.OnNmeaMessageListener;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -96,6 +95,7 @@ import android.widget.ListView;
 import android.widget.PopupWindow;
 import android.widget.ProgressBar;
 import android.widget.ScrollView;
+import android.widget.SeekBar;
 import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -124,7 +124,6 @@ import android.view.animation.*;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
-
 
 
 //public class AndPskmail extends Activity {
@@ -205,7 +204,11 @@ public class AndPskmail extends AppCompatActivity {
     public static int DeviceToGPSTimeCorrection = 0;
 
     public static String TerminalBuffer = "";
-    public static String ModemBuffer = "";
+    //public static String ModemBuffer = "";
+    public static StringBuffer ModemBuffer = new StringBuffer(11000); //1000 char more than max kept, but expandable anyway
+    //Lock for updating the receive display buffer (Concurrent updates with the Modem thread)
+    public static final Object modemBufferlock = new Object();
+
     public static String APRSBuffer = "";
     public static config myconfig = null;
 
@@ -249,7 +252,8 @@ public class AndPskmail extends AppCompatActivity {
     public static boolean deviceJustConnected = false;
     public static AudioManager mAudioManager;
     public static BluetoothAdapter mBluetoothAdapter = null;
-    private static final int REQUEST_ENABLE_BT = 1;
+    public static final int STREAM_BLUETOOTH_SCO = 6;
+    //private static final int REQUEST_ENABLE_BT = 1;
     //To monitor the incoming calls and disconnect Bluetooth so that we donlt send the phone call audio to the radio
     private TelephonyManager tmgr = null;
     //Bluetooth Audio devices
@@ -512,25 +516,45 @@ public class AndPskmail extends AppCompatActivity {
         }
     };
 
+    static long lastUpdateTime = 0L;
     // Create runnable for posting to modem window
-    public static final Runnable addtomodem = new Runnable() {
+    public static final Runnable updateModemScreen = new Runnable() {
         public void run() {
-            // myTV.setText(Processor.mainwindow);
-            if (myModemTV != null) {
-                myModemTV.append(Processor.monitor);
-                ModemBuffer += Processor.monitor;
-                if (ModemBuffer.length() > 60000)
-                    ModemBuffer = ModemBuffer.substring(5000);
-                Processor.monitor = "";
-                // Then scroll to the bottom
-                if (myModemSC != null) {
-                    myModemSC.post(new Runnable() {
-                        public void run() {
-                            myModemSC.fullScroll(View.FOCUS_DOWN);
+            if (currentview == MODEMVIEWnoWF || currentview == MODEMVIEWwithWF) {
+                if (Modem.lastCharacterTime - lastUpdateTime > 50) {
+                    lastUpdateTime = System.currentTimeMillis();
+                    if (myModemTV != null) {
+                        synchronized (modemBufferlock) {
+                            //myModemTV.append(Processor.monitor);
+                            myModemTV.setText(ModemBuffer.toString(), TextView.BufferType.SPANNABLE);
+                            //ModemBuffer += Processor.monitor;
+                            //ModemBuffer.append(Processor.monitor);
+                            // Then scroll to the bottom
+                            if (myModemSC != null) {
+                                myModemSC.post(new Runnable() {
+                                    public void run() {
+                                        myModemSC.fullScroll(View.FOCUS_DOWN);
+                                    }
+                                });
+                            }
+                            //Keep buffer length under control
+                            if (ModemBuffer.length() > 11000) {
+                                //ModemBuffer = ModemBuffer.substring(5000);
+                                ModemBuffer.delete(0, 2000);
+                            }
+                            //Processor.monitor = "";
+
                         }
-                    });
+                    }
+                }
+            } else {
+                synchronized (modemBufferlock) {
+                    if (ModemBuffer.length() > 11000) {
+                        ModemBuffer.delete(0, 2000);
+                    }
                 }
             }
+
         }
     };
 
@@ -1121,68 +1145,130 @@ public class AndPskmail extends AppCompatActivity {
         myThread.start();
 
         //init NMEA listener for GPS time (to negate the device clock drift when not in mobile reception area)
-        locationManager = (LocationManager) this
-                .getSystemService(Context.LOCATION_SERVICE);
+        //locationManager = (LocationManager) this.getSystemService(Context.LOCATION_SERVICE);
         locationManager = (LocationManager) getSystemService(LOCATION_SERVICE);
         if (ContextCompat.checkSelfPermission(myInstance,
                 Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
-            locationManager.addNmeaListener(new GpsStatus.NmeaListener() {
-                public void onNmeaReceived(long timestamp, String nmea) {
-                    if (AndPskmail.myconfig.getPreferenceB("USEGPSTIME", false)) {
-                        String[] NmeaArray = nmea.split(",");
-                        if (NmeaArray[0].equals("$GPGGA")) {
-                            //debug
-                            //Processor.APRSwindow += "\n NMEA is :"+nmea;
-                            //AndPskmail.mHandler.post(AndPskmail.addtoAPRS);
-                            // Some devices do not include decimal seconds
-                            //if (NmeaArray[1].indexOf(".") > 4) {
-                            if (NmeaArray[1].length() > 5) { //6 or more characters
-                                //String GpsTime = NmeaArray[1].substring(0,NmeaArray[1].indexOf("."));
-                                String GpsTime = NmeaArray[1].substring(0, 6);
-                                GPSTimeAcquired = true; //Mark that we have acquired time (for the clock colour display and autobeacon time)
-                                GpsTime = "000000" + GpsTime;
-                                //							Processor.APRSwindow += " GpsTime:" + GpsTime + "\n";
-                                GpsTime = GpsTime.substring(GpsTime.length() - 4, GpsTime.length());
-                                int GpsMin = Integer.parseInt(GpsTime.substring(0, 2));
-                                int GpsSec = Integer.parseInt(GpsTime.substring(2, 4));
-                                //Apply leap seconds correction: GPS is 16 seconds faster than UTC as of June 2013.
-                                //Some devices do not apply this automatically (depends on the internal GPS engine)
-                                int leapseconds = Integer.parseInt(AndPskmail.myconfig.getPreference("LEAPSECONDS", "0"));
-                                GpsSec -= leapseconds;
-                                if (GpsSec < 0) {
-                                    GpsSec += 60;
-                                    GpsMin--;
-                                    if (GpsMin < 0) {
-                                        GpsMin += 60;
+            if (Build.VERSION.SDK_INT < 24) {
+                locationManager.addNmeaListener(new GpsStatus.NmeaListener() {
+                    public void onNmeaReceived(long timestamp, String nmea) {
+                        if (AndPskmail.myconfig.getPreferenceB("USEGPSTIME", false)) {
+                            String[] NmeaArray = nmea.split(",");
+                            if (NmeaArray[0].equals("$GPGGA") || NmeaArray[0].equals("$GNRMC")) {
+                                //debug
+                                //Processor.APRSwindow += "\n NMEA is :"+nmea;
+                                //AndPskmail.mHandler.post(AndPskmail.addtoAPRS);
+                                // Some devices do not include decimal seconds
+                                //if (NmeaArray[1].indexOf(".") > 4) {
+                                if (NmeaArray[1].length() > 5) { //6 or more characters
+                                    //String GpsTime = NmeaArray[1].substring(0,NmeaArray[1].indexOf("."));
+                                    String GpsTime = NmeaArray[1].substring(0, 6);
+                                    GPSTimeAcquired = true; //Mark that we have acquired time (for the clock colour display and autobeacon time)
+                                    GpsTime = "000000" + GpsTime;
+                                    //							Processor.APRSwindow += " GpsTime:" + GpsTime + "\n";
+                                    GpsTime = GpsTime.substring(GpsTime.length() - 4, GpsTime.length());
+                                    int GpsMin = Integer.parseInt(GpsTime.substring(0, 2));
+                                    int GpsSec = Integer.parseInt(GpsTime.substring(2, 4));
+                                    //Apply leap seconds correction: GPS is 16 seconds faster than UTC as of June 2013.
+                                    //Some devices do not apply this automatically (depends on the internal GPS engine)
+                                    int leapseconds = Integer.parseInt(AndPskmail.myconfig.getPreference("LEAPSECONDS", "0"));
+                                    GpsSec -= leapseconds;
+                                    if (GpsSec < 0) {
+                                        GpsSec += 60;
+                                        GpsMin--;
+                                        if (GpsMin < 0) {
+                                            GpsMin += 60;
+                                        }
                                     }
-                                }
-                                //In case of (unexpected) negative leap seconds values
-                                if (GpsSec > 60) {
-                                    GpsSec -= 60;
-                                    GpsMin++;
-                                    if (GpsMin > 60) {
-                                        GpsMin -= 60;
+                                    //In case of (unexpected) negative leap seconds values
+                                    if (GpsSec > 60) {
+                                        GpsSec -= 60;
+                                        GpsMin++;
+                                        if (GpsMin > 60) {
+                                            GpsMin -= 60;
+                                        }
                                     }
+                                    //Compare to current device time and date and calculate the offset to be applied at display
+                                    long nowInMilli = System.currentTimeMillis();
+                                    Time mytime = new Time();
+                                    mytime.set(nowInMilli); //initialized to now
+                                    int DeviceTime = mytime.second + (mytime.minute * 60);
+                                    //Correction (in seconds)
+                                    DeviceToGPSTimeCorrection = (GpsSec + (GpsMin * 60)) - DeviceTime;
+                                    //Debug
+                                    //							Processor.APRSwindow += " Device Time is :" + mytime.minute + ":" + mytime.second + "\n";
+                                    //							Processor.APRSwindow += " GPS Time is :" + GpsMin + ":" + GpsSec + "\n";
+                                    //							Processor.APRSwindow += " Correction is :" + DeviceToGPSTimeCorrection + "\n";
                                 }
-                                //Compare to current device time and date and calculate the offset to be applied at display
-                                long nowInMilli = System.currentTimeMillis();
-                                Time mytime = new Time();
-                                mytime.set(nowInMilli); //initialized to now
-                                int DeviceTime = mytime.second + (mytime.minute * 60);
-                                //Correction (in seconds)
-                                DeviceToGPSTimeCorrection = (GpsSec + (GpsMin * 60)) - DeviceTime;
-                                //Debug
-                                //							Processor.APRSwindow += " Device Time is :" + mytime.minute + ":" + mytime.second + "\n";
-                                //							Processor.APRSwindow += " GPS Time is :" + GpsMin + ":" + GpsSec + "\n";
-                                //							Processor.APRSwindow += " Correction is :" + DeviceToGPSTimeCorrection + "\n";
                             }
+                            //					AndPskmail.mHandler.post(AndPskmail.addtoAPRS);
+                            //loggingclass.writelog("Timestamp is :" +timestamp+"   nmea is :"+nmea,
+                            //					  null, true);
                         }
-                        //					AndPskmail.mHandler.post(AndPskmail.addtoAPRS);
-                        //loggingclass.writelog("Timestamp is :" +timestamp+"   nmea is :"+nmea,
-                        //					  null, true);
                     }
-                }
-            });
+                });
+
+            } else {
+                locationManager.addNmeaListener(new OnNmeaMessageListener() {
+                    public void onNmeaMessage(String nmea, long timestamp) {
+                        if (AndPskmail.myconfig.getPreferenceB("USEGPSTIME", false)) {
+                            String[] NmeaArray = nmea.split(",");
+                            if (NmeaArray[0].equals("$GPGGA") || NmeaArray[0].equals("$GNRMC")) {
+                                //debug
+                                //Processor.APRSwindow += "\n NMEA is :"+nmea;
+                                //AndPskmail.mHandler.post(AndPskmail.addtoAPRS);
+                                // Some devices do not include decimal seconds
+                                //if (NmeaArray[1].indexOf(".") > 4) {
+                                if (NmeaArray[1].length() > 5) { //6 or more characters
+                                    //String GpsTime = NmeaArray[1].substring(0,NmeaArray[1].indexOf("."));
+                                    String GpsTime = NmeaArray[1].substring(0, 6);
+                                    GPSTimeAcquired = true; //Mark that we have acquired time (for the clock colour display and autobeacon time)
+                                    GpsTime = "000000" + GpsTime;
+                                    //							Processor.APRSwindow += " GpsTime:" + GpsTime + "\n";
+                                    GpsTime = GpsTime.substring(GpsTime.length() - 4, GpsTime.length());
+                                    int GpsMin = Integer.parseInt(GpsTime.substring(0, 2));
+                                    int GpsSec = Integer.parseInt(GpsTime.substring(2, 4));
+                                    //Apply leap seconds correction: GPS is 16 seconds faster than UTC as of June 2013.
+                                    //Some devices do not apply this automatically (depends on the internal GPS engine)
+                                    int leapseconds = Integer.parseInt(AndPskmail.myconfig.getPreference("LEAPSECONDS", "0"));
+                                    GpsSec -= leapseconds;
+                                    if (GpsSec < 0) {
+                                        GpsSec += 60;
+                                        GpsMin--;
+                                        if (GpsMin < 0) {
+                                            GpsMin += 60;
+                                        }
+                                    }
+                                    //In case of (unexpected) negative leap seconds values
+                                    if (GpsSec > 60) {
+                                        GpsSec -= 60;
+                                        GpsMin++;
+                                        if (GpsMin > 60) {
+                                            GpsMin -= 60;
+                                        }
+                                    }
+                                    //Compare to current device time and date and calculate the offset to be applied at display
+                                    long nowInMilli = System.currentTimeMillis();
+                                    Time mytime = new Time();
+                                    mytime.set(nowInMilli); //initialized to now
+                                    int DeviceTime = mytime.second + (mytime.minute * 60);
+                                    //Correction (in seconds)
+                                    DeviceToGPSTimeCorrection = (GpsSec + (GpsMin * 60)) - DeviceTime;
+                                    //Debug
+                                    //							Processor.APRSwindow += " Device Time is :" + mytime.minute + ":" + mytime.second + "\n";
+                                    //							Processor.APRSwindow += " GPS Time is :" + GpsMin + ":" + GpsSec + "\n";
+                                    //							Processor.APRSwindow += " Correction is :" + DeviceToGPSTimeCorrection + "\n";
+                                }
+                            }
+                            //					AndPskmail.mHandler.post(AndPskmail.addtoAPRS);
+                            //loggingclass.writelog("Timestamp is :" +timestamp+"   nmea is :"+nmea,
+                            //					  null, true);
+                        }
+                    }
+                });
+
+            }
+
 
         }
         // Init config
@@ -1459,8 +1545,9 @@ public class AndPskmail extends AppCompatActivity {
                         EditText emailEntry = (EditText) findViewById(R.id.emailaddress);
                         if (emailEntry != null) emailEntry.setText(email);
                         if (email.length() == 0) {
-                            Toast.makeText(this, "No email found for contact.",
-                                    Toast.LENGTH_SHORT).show();
+                            //Toast.makeText(this, "No email found for contact.",
+                            //        Toast.LENGTH_SHORT).show();
+                            middleToastText("No email found for contact.");
                         }
 
                     }
@@ -1813,6 +1900,9 @@ public class AndPskmail extends AppCompatActivity {
     // Simple text transparent popups (bottom of screen)
     public void topToastText(String message) {
         try {
+            if (Build.VERSION.SDK_INT >= 28 && myToast.getView().isShown()) {
+                myToast.cancel();
+            }
             myToast.setText(message);
             myToast.setGravity(Gravity.TOP, 0	, 100);
             myToast.show();
@@ -1828,6 +1918,9 @@ public class AndPskmail extends AppCompatActivity {
     // Simple text transparent popups TOWARDS MIDDLE OF SCREEN
     public void middleToastText(String message) {
         try {
+            if (Build.VERSION.SDK_INT >= 28 && myToast.getView().isShown()) {
+                myToast.cancel();
+            }
             myToast.setText(message);
             myToast.setGravity(Gravity.CENTER, 0	, 0);
             myToast.show();
@@ -1842,6 +1935,9 @@ public class AndPskmail extends AppCompatActivity {
     // Simple text transparent popups
     public void bottomToastText(String message) {
         try {
+            if (Build.VERSION.SDK_INT >= 28 && myToast.getView().isShown()) {
+                myToast.cancel();
+            }
             myToast.setText(message);
             myToast.setGravity(Gravity.BOTTOM, 0, 100);
             myToast.show();
@@ -3573,6 +3669,28 @@ public class AndPskmail extends AppCompatActivity {
         });
     }
 
+
+    private void setVolume(int sliderValue) {
+        AudioManager audioManager = (AudioManager) AndPskmail.myContext.getSystemService(Context.AUDIO_SERVICE);
+        try {
+            int maxVolume;
+            int stream = AndPskmail.toBluetooth ? STREAM_BLUETOOTH_SCO : AudioManager.STREAM_MUSIC;
+            maxVolume = audioManager.getStreamMaxVolume(stream);
+            maxVolume = maxVolume * sliderValue / 100;
+            audioManager.setStreamVolume(stream, maxVolume, 0);
+            //Save the new value in preferences
+            SharedPreferences.Editor editor = AndPskmail.mysp.edit();
+            editor.putString("MEDIAVOLUME", Integer.toString(sliderValue));
+            // Commit the edits!
+            editor.commit();
+
+        } catch (Exception e) {
+            middleToastText("Error Adjusting Volume");
+        }
+
+    }
+
+
     // Display the Modem layout and associate it's buttons
     @SuppressLint("NewApi")
     private void displayModem(int screenAnimation, boolean withWaterfall) {
@@ -3601,10 +3719,9 @@ public class AndPskmail extends AppCompatActivity {
         SignalQuality = (ProgressBar) findViewById(R.id.signal_quality);
 
         // Reset modem display in case it was blanked out by a new oncreate call
-        myModemTV.setText(ModemBuffer);
+        //Done in handler now
+        //myModemTV.setText(ModemBuffer);
         myModemSC = (ScrollView) findViewById(R.id.modemscrollview);
-        // update with whatever we have already accumulated then scroll
-        AndPskmail.mHandler.post(AndPskmail.addtomodem);
 
         // Advise user of which screen we are in
         topToastText("Modem Screen");
@@ -3667,6 +3784,26 @@ public class AndPskmail extends AppCompatActivity {
 
         }
 
+        //Initialize the volume slider bar
+        SeekBar volControl = (SeekBar)findViewById(R.id.volumeSlider);
+        int mediaVolume = AndPskmail.myconfig.getPreferenceI("MEDIAVOLUME", 100);
+        volControl.setMax(100);
+        volControl.setProgress(mediaVolume);
+        volControl.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onStopTrackingTouch(SeekBar arg0) {
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar arg0) {
+            }
+
+            @Override
+            public void onProgressChanged(SeekBar arg0, int arg1, boolean arg2) {
+                setVolume(arg1);
+            }
+        });
+
         // JD Initialize the MODEM RX ON/OFF button
         myButton = (Button) findViewById(R.id.button_modemONOFF);
         myButton.setOnClickListener(new OnClickListener() {
@@ -3715,7 +3852,7 @@ public class AndPskmail extends AppCompatActivity {
                         }
                         if (Double.valueOf(android.os.Build.VERSION.SDK) >= 11.0) {
                             //Issue the notification
-                            myNotificationManager.notify(9999, myNotification);
+                            //myNotificationManager.notify(9999, myNotification);
                         }
                     }
                     AndPskmail.mHandler.post(AndPskmail.updatetitle);
@@ -3949,6 +4086,10 @@ public class AndPskmail extends AppCompatActivity {
                 }
             }
         });
+        //Force display update
+        lastUpdateTime = 0L;
+        // update with whatever we have already accumulated then scroll
+        AndPskmail.mHandler.post(AndPskmail.updateModemScreen);
 
     }
 
@@ -3975,7 +4116,7 @@ public class AndPskmail extends AppCompatActivity {
     private void SendButtonAction() {
         if (Processor.Connected) {
             // FileReader out = null;
-            if (Processor.compressedmail) {
+            if (AndPskmail.myconfig.getPreferenceB("COMPRESSED")) {
                 try {
 
                     File dir = new File(Processor.HomePath

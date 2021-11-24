@@ -400,7 +400,6 @@
         </EditTextPreference>
 
         <EditTextPreference
-            android:defaultValue="Please-Enter-your-return-address"
             android:key="RETURNADDRESS"
             android:summary="(Optional)"
             android:title="Return Address" >

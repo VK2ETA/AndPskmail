@@ -1,16 +1,12 @@
 apply plugin: 'com.android.application'
 
 android {
-    compileSdkVersion 27
-    buildToolsVersion "28.0.3"
+    compileSdkVersion 28
+    //buildToolsVersion "28.0.3"
     defaultConfig {
         applicationId "com.AndPskmail"
         minSdkVersion 14
         targetSdkVersion 27
-        compileOptions {
-            sourceCompatibility JavaVersion.VERSION_1_5
-            targetCompatibility JavaVersion.VERSION_1_5
-        }
     }
     buildTypes {
         release {
@@ -23,6 +19,6 @@ android {
 }
 
 dependencies {
-    compile files('libs/acra-4.2.3.jar')
-    compile 'com.android.support:appcompat-v7:27.0.2'
+    implementation files('libs/acra-4.2.3.jar')
+    implementation 'com.android.support:appcompat-v7:28.0.0'
 }

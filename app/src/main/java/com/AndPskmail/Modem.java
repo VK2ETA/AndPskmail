@@ -16,6 +16,7 @@
 package com.AndPskmail;
 
 import android.Manifest;
+import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
@@ -26,7 +27,6 @@ import android.media.AudioTrack;
 import android.media.MediaRecorder.AudioSource;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
-import android.widget.Toast;
 
 
 public class Modem {
@@ -44,18 +44,23 @@ public class Modem {
 
     //	public static boolean rxHasStopped = true;
     public static int NumberOfOverruns = 0;
-    private static AudioRecord audiorecorder = null;
+    private static AudioRecord rxAudioRecorder = null;
     private boolean RxON = false;
-    private int bufferSize = 0;
-    private final float sampleRate = 8000.0f;
+    private static int rxBufferSize = 0;
+    private static int txBufferSize = 0;
+    private final static float sampleRate = 8000.0f;
+    public static AudioTrack txAudioTrack = null;
 
     public static double[] WaterfallAmpl = new double[RxRSID.RSID_FFT_SIZE];
     public static boolean newAmplReady = false;
 
     private static boolean BlockActive = false;
-    public static String MonitorString = "";
-    private static String BlockString = "";
+    //public static String MonitorBuffer = "";
+    //private static StringBuilder MonitorBuffer = new StringBuilder(11000);
+    //private static String BlockBuffer = "";
+    private static StringBuilder BlockBuffer = new StringBuilder(500);
     private static int RxBlockSize = 0;
+    public static long lastCharacterTime = 0;
 
     public static TxPSK TXMpsk;
     public static TxMFSK TXMmfsk;
@@ -69,6 +74,7 @@ public class Modem {
 
     public double rxFrequency = 1500.0;
     double squelch = 20.0;
+
 
     public static boolean stopTX = false;
 
@@ -222,22 +228,22 @@ my %modelist = ("0" => "default",
 
     private void soundInInit() {
 
-        bufferSize = (int) sampleRate; // 1 second of Audio max
-        if (bufferSize < AudioRecord.getMinBufferSize((int) sampleRate, AudioFormat.CHANNEL_IN_MONO , AudioFormat.ENCODING_PCM_16BIT)) {
+        rxBufferSize = (int) sampleRate; // 1 second of Audio max
+        if (rxBufferSize < AudioRecord.getMinBufferSize((int) sampleRate, AudioFormat.CHANNEL_IN_MONO , AudioFormat.ENCODING_PCM_16BIT)) {
             // Check to make sure buffer size is not smaller than the smallest allowed one
-            bufferSize = AudioRecord.getMinBufferSize((int) sampleRate, AudioFormat.CHANNEL_IN_MONO , AudioFormat.ENCODING_PCM_16BIT);
+            rxBufferSize = AudioRecord.getMinBufferSize((int) sampleRate, AudioFormat.CHANNEL_IN_MONO , AudioFormat.ENCODING_PCM_16BIT);
         }
         int ii = 20; //number of 1/4 seconds wait
         while (--ii > 0) {
             if (AndPskmail.toBluetooth) {
                 //Bluetooth hack (use voice call)
-                audiorecorder = new AudioRecord(AudioSource.MIC, 8000, android.media.AudioFormat.CHANNEL_IN_MONO,
-                        android.media.AudioFormat.ENCODING_PCM_16BIT, bufferSize);
+                rxAudioRecorder = new AudioRecord(AudioSource.MIC, 8000, android.media.AudioFormat.CHANNEL_IN_MONO,
+                        android.media.AudioFormat.ENCODING_PCM_16BIT, rxBufferSize);
             } else {
-                audiorecorder = new AudioRecord(AudioSource.MIC, 8000, android.media.AudioFormat.CHANNEL_IN_MONO,
-                        android.media.AudioFormat.ENCODING_PCM_16BIT, bufferSize);
+                rxAudioRecorder = new AudioRecord(AudioSource.MIC, 8000, android.media.AudioFormat.CHANNEL_IN_MONO,
+                        android.media.AudioFormat.ENCODING_PCM_16BIT, rxBufferSize);
             }
-            if (audiorecorder.getState() == AudioRecord.STATE_INITIALIZED) {
+            if (rxAudioRecorder.getState() == AudioRecord.STATE_INITIALIZED) {
                 ii = 0;//ok done
             } else {
                 if (ii < 10) { //Only if have to wait more than 1 seconds
@@ -251,7 +257,7 @@ my %modelist = ("0" => "default",
                 }
             }
         }
-        if (audiorecorder.getState() != AudioRecord.STATE_INITIALIZED) {
+        if (rxAudioRecorder.getState() != AudioRecord.STATE_INITIALIZED) {
             //Check the permission for audio recording
             if (ContextCompat.checkSelfPermission(AndPskmail.myContext, Manifest.permission.RECORD_AUDIO)
                     != PackageManager.PERMISSION_GRANTED) {
@@ -310,7 +316,7 @@ my %modelist = ("0" => "default",
                     rxInit();
                     NumberOfOverruns = 0;
                     try {
-                        audiorecorder.startRecording();
+                        rxAudioRecorder.startRecording();
                         RxON = true;
                     } catch (IllegalStateException e) {
                         //e.printStackTrace();
@@ -328,8 +334,8 @@ my %modelist = ("0" => "default",
                     }
                     Processor.restartRxModem.drainPermits();
                     //Since the callback is not working, implement a while loop.
-                    short[] so8K = new short[bufferSize];
-                    int size12Kbuf =  (int) ((bufferSize + 1) * 11025.0 / 8000.0);
+                    short[] so8K = new short[rxBufferSize];
+                    int size12Kbuf =  (int) ((rxBufferSize + 1) * 11025.0 / 8000.0);
                     double[] so12K = new double[size12Kbuf];
                     if (Processor.RxModem.toString().startsWith("PSK")) {
                         //Change PSK modem
@@ -349,7 +355,7 @@ my %modelist = ("0" => "default",
                         if (numSamples8K > 0) Processor.cpuload = (int)(((double)(endproctime - startproctime)) / buffertime * 100);
                         if (Processor.cpuload > 100) Processor.cpuload = 100;
                         AndPskmail.mHandler.post(AndPskmail.updatecpuload);
-                        numSamples8K = audiorecorder.read(so8K, 0, 8000/4); //process only part of the buffer to avoid lumpy processing
+                        numSamples8K = rxAudioRecorder.read(so8K, 0, 8000/4); //process only part of the buffer to avoid lumpy processing
                         if (numSamples8K > 0) {
                             modemState = RXMODEMRUNNING;
                             startproctime = System.currentTimeMillis();
@@ -372,22 +378,24 @@ my %modelist = ("0" => "default",
                             }
                             //Post to monitor (Modem) window after each buffer processing
                             //Add TX frame too if present
-                            if (Modem.MonitorString.length() > 0 || Processor.TXmonitor.length() > 0) {
-                                Processor.monitor += Modem.MonitorString + Processor.TXmonitor;
-                                Processor.TXmonitor = "";
-                                Modem.MonitorString = "";
-                                AndPskmail.mHandler.post(AndPskmail.addtomodem);
-                            }
+                            //if (MonitorBuffer.length() > 0 || Processor.TXmonitor.length() > 0) {
+                            //if (Processor.TXmonitor.length() > 0) {
+                                //Processor.monitor += Modem.MonitorBuffer + Processor.TXmonitor;
+                            //    appendToModemBuffer(Processor.TXmonitor);
+                            //    Processor.TXmonitor = "";
+                                //Modem.MonitorBuffer = "";
+                            //    AndPskmail.mHandler.post(AndPskmail.updateModemScreen);
+                            //}
                         }
                     }//while (RxON)
                     //We dropped here on pause flag
-                    if (audiorecorder != null) {
+                    if (rxAudioRecorder != null) {
                         //Avoid some crashes on wrong state
-                        if (audiorecorder.getState() == AudioRecord.STATE_INITIALIZED) {
-                            if (audiorecorder.getRecordingState() == AudioRecord.RECORDSTATE_RECORDING) {
-                                audiorecorder.stop();
+                        if (rxAudioRecorder.getState() == AudioRecord.STATE_INITIALIZED) {
+                            if (rxAudioRecorder.getRecordingState() == AudioRecord.RECORDSTATE_RECORDING) {
+                                rxAudioRecorder.stop();
                             }
-                            audiorecorder.release();
+                            rxAudioRecorder.release();
                         }
                     }
                     modemState = RXMODEMPAUSED;
@@ -458,35 +466,54 @@ my %modelist = ("0" => "default",
 
     }
 
+    //Appends received string to modem buffer
+    public static void appendToModemBuffer(String rxedCharacters) {
+        synchronized(AndPskmail.modemBufferlock) {
+            AndPskmail.ModemBuffer.append(rxedCharacters);
+        }
+    }
+
+
+    //Same for single character
+    public static void appendToModemBuffer(char rxedCharacter) {
+        synchronized(AndPskmail.modemBufferlock) {
+            AndPskmail.ModemBuffer.append(rxedCharacter);
+        }
+    }
+
+
     public static void rxblock (char inChar) {
 
         if (!Processor.Connected & !Processor.Connecting) {
             Processor.DCD = Processor.MAXDCD;
         }
-
+        //Save the time of the last character received
+        lastCharacterTime = System.currentTimeMillis();
         if (inChar > 127) {
             // todo: unicode encoding
             inChar = 0;
         }
-
         switch (inChar) {
             case 0:
                 break; // do nothing
             case 1:
-                MonitorString += "<SOH>";
+                appendToModemBuffer("<SOH>");
+                AndPskmail.mHandler.post(AndPskmail.updateModemScreen);
                 if (!BlockActive) {
                     BlockActive = true;
-                    BlockString = "<SOH>";
+                    BlockBuffer.delete(0,BlockBuffer.length());
+                    BlockBuffer.append("<SOH>");
                 } else {
                     //Process block if of right size
-                    BlockString += "<SOH>";
-                    RxBlockSize = BlockString.length() - 17;
+                    BlockBuffer.append("<SOH>");
+                    RxBlockSize = BlockBuffer.length() - 17;
                     Processor.Totalbytes += Processor.RXBlocksize;
                     if (RxBlockSize > 0 ) {
-                        Processor.ProcessBlock(BlockString);
+                        Processor.ProcessBlock(BlockBuffer.toString());
                     }
                     //Reset for next block
-                    BlockString = "<SOH>";
+                    BlockBuffer = new StringBuilder(500);
+                    BlockBuffer.append("<SOH>");
                 }
                 //	            Main.DCD = 0;
                 break;
@@ -494,38 +521,114 @@ my %modelist = ("0" => "default",
                 //Store the snr value for ARQ usage
                 Processor.snr = Processor.avgsnr;
                 Processor.avgsnr = 50; //reset to midrange
-                MonitorString += "<EOT>";
+                appendToModemBuffer("<EOT>");
+                //Force immediate update of screen
+                AndPskmail.lastUpdateTime = 0L;
+                AndPskmail.mHandler.post(AndPskmail.updateModemScreen);
                 if (BlockActive == true) {
-                    BlockString += "<EOT>";
-                    Processor.ProcessBlock(BlockString);
-                    BlockString = "";
+                    BlockBuffer.append("<EOT>");
+                    Processor.ProcessBlock(BlockBuffer.toString());
+                    BlockBuffer.delete(0,BlockBuffer.length());
                 }
                 if (BlockActive) {
                     BlockActive = false;
                 }
                 break;
             case 31:
-                MonitorString += "<US>";
+                appendToModemBuffer("<US>");
                 break;
             case 10:
             case 13:
-                MonitorString += "\n";
+                appendToModemBuffer("\n");
                 if (BlockActive == true) {
-                    BlockString += inChar;
+                    BlockBuffer.append(inChar);
                 }
                 break;
             default:
                 if (BlockActive) {
-                    BlockString += inChar;
+                    BlockBuffer.append(inChar);
                 }
                 if (inChar > 31) {
-                    MonitorString += inChar;
+                    //MonitorBuffer.append(inChar);
+                    appendToModemBuffer(inChar);
+                    AndPskmail.mHandler.post(AndPskmail.updateModemScreen);
                 }
                 break;
         }
         // end switch
     }
 
+
+    //Init sound systems for TX
+    private static void txSoundInInit() {
+
+        //Open and initialise the Output towards the Radio
+        txBufferSize = 4 * android.media.AudioTrack.getMinBufferSize(8000,
+                AudioFormat.CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_16BIT); //Android check the multiplier value for the buffer size
+        if (AndPskmail.toBluetooth) {
+            txAudioTrack = new AudioTrack(AudioManager.STREAM_VOICE_CALL, 8000, AudioFormat.CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_16BIT, txBufferSize, AudioTrack.MODE_STREAM);
+        } else {
+            txAudioTrack = new AudioTrack(AudioManager.STREAM_MUSIC, 8000, AudioFormat.CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_16BIT, txBufferSize, AudioTrack.MODE_STREAM);
+        }
+
+        //Start TX audio track
+        txAudioTrack.setStereoVolume(1.0f, 1.0f);
+        txAudioTrack.play();
+
+        //Set requested volume AFTER we open the audio track as some devices (e.g. Oppo have two different volumes for when in or out of audio track
+        AudioManager audioManager = (AudioManager) AndPskmail.myContext.getSystemService(Context.AUDIO_SERVICE);
+        try {
+            int maxVolume;
+            int stream = AndPskmail.toBluetooth ? AndPskmail.STREAM_BLUETOOTH_SCO : AudioManager.STREAM_MUSIC;
+            maxVolume = audioManager.getStreamMaxVolume(stream);
+            int mediaVolume = config.getPreferenceI("MEDIAVOLUME", 100);
+            if (mediaVolume < 5) mediaVolume = 5;
+            if (mediaVolume > 100) mediaVolume = 100;
+            maxVolume = maxVolume * mediaVolume / 100;
+            audioManager.setStreamVolume(stream,
+                    maxVolume, 0);  // 0 can also be changed to AudioManager.FLAG_PLAY_SOUND
+        } catch (Exception e) {
+            //AndPskmail.myContext.middleToastText("Error Adjusting Volume");
+        }
+    }
+
+
+    //Release sound systems
+    private static void txSoundRelease() {
+        if (txAudioTrack != null) {
+
+            //Wait for end of buffer to be emptied
+            //try {
+            //    Thread.sleep(1000 * txBufferSize / 8000);//wait buffer length time (milli sec).
+            //} catch (InterruptedException e) {
+            //Do nothing
+            //}
+            //Stop audio track
+            txAudioTrack.stop();
+            //debugging only
+            //RMsgUtil.addEntryToLog(RMsgUtil.dateTimeStamp() + "Done 'txAudioTrack.stop'");
+            //Wait for end of audio play to avoid
+            //overlaps between end of TX and start of RX
+            while (txAudioTrack.getPlayState() == AudioTrack.PLAYSTATE_PLAYING) {
+                try {
+                    Thread.sleep(50);
+                } catch (InterruptedException e) {
+                    // TODO Auto-generated catch block
+                    //e.printStackTrace();
+                }
+            }
+            //debugging only
+            //RMsgUtil.addEntryToLog(RMsgUtil.dateTimeStamp() + "Done 'waiting for end of playing state'");
+            //Android debug add a fixed delay to avoid cutting off the tail end of the modulation
+            //try {
+            //    Thread.sleep(500);
+            //} catch (InterruptedException e) {
+            //e.printStackTrace();
+            //}
+
+            txAudioTrack.release();
+        }
+    }
 
     //In a separate thread so that the UI thread is not blocked during TX
     public void sendln(String Sendline) {
@@ -591,6 +694,9 @@ my %modelist = ("0" => "default",
                             loggingclass.writelog("Wrong TX Mode called: " + Processor.TxModem.toString() , null, true);
                         }
 
+                        //Init sound system
+                        txSoundInInit();
+
                         //Send TX RSID if required
                         if (Processor.TXID) {
                             //Reset the send RSID flag
@@ -608,6 +714,8 @@ my %modelist = ("0" => "default",
                         }
                         //Reset TxRSID as it is OFF by default and needs to be enabled when required
                         Processor.q.send_txrsid_command("OFF");
+                        //Release sound systems
+                        txSoundRelease();
                         //Restart modem reception
                         unPauseRxModem();
                         Processor.TXActive = false;
@@ -634,7 +742,6 @@ my %modelist = ("0" => "default",
     }
 
     private class TxTuneThread implements Runnable {
-        private AudioTrack at = null;
 
 
         public TxTuneThread() {
@@ -664,21 +771,26 @@ my %modelist = ("0" => "default",
 
             int volumebits = Integer.parseInt(AndPskmail.myconfig.getPreference("VOLUME","8"));
 
+            /* New method
             //Note the multiplier value for the buffer size
             int intSize = 4 * android.media.AudioTrack.getMinBufferSize(8000,
                     AudioFormat.CHANNEL_CONFIGURATION_MONO, AudioFormat.ENCODING_PCM_16BIT);
 
             if (AndPskmail.toBluetooth) {
                 //JD Bluetooth hack test
-                //		        	at = new AudioTrack(AudioManager.STREAM_MUSIC, 8000, AudioFormat.CHANNEL_CONFIGURATION_MONO, AudioFormat.ENCODING_PCM_16BIT, intSize , AudioTrack.MODE_STREAM);
-                at = new AudioTrack(AudioManager.STREAM_VOICE_CALL, 8000, AudioFormat.CHANNEL_CONFIGURATION_MONO, AudioFormat.ENCODING_PCM_16BIT, intSize , AudioTrack.MODE_STREAM);
+                //		        	txAudioTrack = new AudioTrack(AudioManager.STREAM_MUSIC, 8000, AudioFormat.CHANNEL_CONFIGURATION_MONO, AudioFormat.ENCODING_PCM_16BIT, intSize , AudioTrack.MODE_STREAM);
+                txAudioTrack = new AudioTrack(AudioManager.STREAM_VOICE_CALL, 8000, AudioFormat.CHANNEL_CONFIGURATION_MONO, AudioFormat.ENCODING_PCM_16BIT, intSize , AudioTrack.MODE_STREAM);
             } else {
-                at = new AudioTrack(AudioManager.STREAM_MUSIC, 8000, AudioFormat.CHANNEL_CONFIGURATION_MONO, AudioFormat.ENCODING_PCM_16BIT, intSize , AudioTrack.MODE_STREAM);
+                txAudioTrack = new AudioTrack(AudioManager.STREAM_MUSIC, 8000, AudioFormat.CHANNEL_CONFIGURATION_MONO, AudioFormat.ENCODING_PCM_16BIT, intSize , AudioTrack.MODE_STREAM);
             }
 
             //Open audiotrack
-            at.setStereoVolume(1.0f,1.0f);
-            at.play();
+            txAudioTrack.setStereoVolume(1.0f,1.0f);
+            txAudioTrack.play();
+            */
+
+            //Init sound system
+            txSoundInInit();
 
             int sr = 8000; // should be active_modem->get_samplerate();
             int symlen = (int) (1 *  sr); //1 second buffer
@@ -698,7 +810,7 @@ my %modelist = ("0" => "default",
                     if (!Processor.tune) {
                         i = 60; //exit tune
                     } else {
-                        at.write(outbuf, 0, symlen);
+                        txAudioTrack.write(outbuf, 0, symlen);
                     }
                 }
             } else {
@@ -708,15 +820,16 @@ my %modelist = ("0" => "default",
                         if (phase > 2.0 * Math.PI) phase -= 2.0 * Math.PI;
                         outbuf[j] = (short) ((int) (Math.sin(phase) * 8386560) >> volumebits);
                     }
-                    at.write(outbuf, 0, symlen);
+                    txAudioTrack.write(outbuf, 0, symlen);
                 }
             }
 
+            /* New method
             //Stop audio track
-            at.stop();
+            txAudioTrack.stop();
             //Wait for end of audio play to avoid
             //overlaps between end of TX and start of RX
-            while (at.getPlayState() == AudioTrack.PLAYSTATE_PLAYING) {
+            while (txAudioTrack.getPlayState() == AudioTrack.PLAYSTATE_PLAYING) {
                 try {
                     Thread.sleep(50);
                 } catch (InterruptedException e) {
@@ -725,7 +838,11 @@ my %modelist = ("0" => "default",
                 }
             }
             //Close audio track
-            at.release();
+            txAudioTrack.release();
+            */
+
+            //Release sound systems
+            txSoundRelease();
 
             Processor.TXActive = false;
 
@@ -734,6 +851,5 @@ my %modelist = ("0" => "default",
 
         }
     };
-
 
 }

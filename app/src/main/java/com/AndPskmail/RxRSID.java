@@ -514,7 +514,10 @@ public class RxRSID {
 					Processor.m.changemode(Processor.RxModem);
 					Processor.justReceivedRSID = true;
 					//Alert the operator via Modem screen
-					Processor.TXmonitor += "\n RSID (" + Integer.toString(iDistance) + ") " + Processor.RxModem.name() + ", freq: " + Integer.toString((int) freq) + "\n";
+					//Processor.TXmonitor += "\n RSID (" + Integer.toString(iDistance) + ") " + Processor.RxModem.name() + ", freq: " + Integer.toString((int) freq) + "\n";
+					Modem.appendToModemBuffer("\n RSID (" + Integer.toString(iDistance) + ") " + Processor.RxModem.name() + ", freq: " + Integer.toString((int) freq) + "\n");
+					// update with whatever we have already accumulated then scroll
+					AndPskmail.mHandler.post(AndPskmail.updateModemScreen);
 					//Update title bar with modem names
 					AndPskmail.mHandler.post(AndPskmail.updatetitle);   
 				}

@@ -34,8 +34,8 @@ import android.os.IBinder;
 
 public class Processor extends Service {
 
-	static String application ="AndPskmail 1.2.7"; // Used to preset an empty status
-	static String version = "Version 1.2.7, 2021-11-03";
+	static String application ="AndPskmail 1.2.8"; // Used to preset an empty status
+	static String version = "Version 1.2.8, 2021-11-24";
 	//public static int RxFrequencyOffset = 0;
 	//public static boolean showallcharacters = false; //debugging
 	public static boolean justReceivedRSID = false;
@@ -98,8 +98,7 @@ static String[] AltModes = {"       ","THOR8","MFSK16","THOR22",
 //delete:	private RxThread myRxThread = null;
 
 	// globals to pass info to gui windows
-	static String monitor = "";
-	static String TXmonitor = "";
+	//VK2ETA use buffer now: static String TXmonitor = "";
 	static boolean monmutex = false;
 	static String mainwindow = "";
 	static String APRSwindow = "";
@@ -306,8 +305,8 @@ static String[] AltModes = {"       ","THOR8","MFSK16","THOR22",
 		q.send_rsid_command("ON");
 
 		//Make sure the display strings are blank
-		Processor.monitor = "";
-		Processor.TXmonitor = "";
+		//Processor.monitor = "";
+		//Processor.TXmonitor = "";
 		Processor.mainwindow = "";
 		Processor.APRSwindow = "";
 
@@ -340,18 +339,10 @@ static String[] AltModes = {"       ","THOR8","MFSK16","THOR22",
 	}  
 
 
-
 	//Post to main terminal window
 	public static void PostToTerminal(String text) {
 		Processor.mainwindow += text;
 		AndPskmail.mHandler.post(AndPskmail.addtoterminal);
-	}
-
-
-	//Post to main terminal window
-	public static void PostToModem(String text) {
-		Processor.monitor += text;
-		AndPskmail.mHandler.post(AndPskmail.addtomodem);
 	}
 
 
@@ -362,17 +353,13 @@ static String[] AltModes = {"       ","THOR8","MFSK16","THOR22",
 	}
 
 
-
-
 	//Process one block of received data. Called from below when a good 
 	//  block is received
 	public static void ProcessBlock(String Blockline) {
 
-		//JD Therefore no sending in this method        	  
-
 		try {
+			//JD No sending in this method
 			//                    if (m.checkBlock()) {
-
 			//                        Blockline = m.getMessage();
 
 			RXBlock rxb = new RXBlock(Blockline);
@@ -472,26 +459,12 @@ static String[] AltModes = {"       ","THOR8","MFSK16","THOR22",
 						myrxstatus = sm.doRXBuffer("", rxb.type);
 
 					}
-
-
-					/* OLD    				// PI4TUE 0.9.33-13:28:52-IM46>
-    				if (Blockline.contains(q.servercall)) {
-    					Pattern ppc = Pattern.compile("\\S+\\s.*-\\d+:\\d+:(\\d+)");
-    					Matcher mpc = ppc.matcher(Blockline);
-    					connectsecond = "";
-    					if (mpc.lookingAt()) {
-
-    						connectsecond = mpc.group(1);
-    					}
-    				}
-					 */
-					// PI4TUE 0.9.33-13:28:52-IM46> OR Java server with "Hi, this is the Pskmail Server of ...."
-					if (Blockline.contains(q.servercall)) {
-						//                                   Pattern ppc = Pattern.compile(".*(\\d\\.\\d).*\\-\\d+:\\d+:(\\d+)\\-(.*)M(\\d+)");
+					//Perl server answer: "PI4TUE 0.9.33-13:28:52-IM46>" OR Java server: "VK2ETA-1 V3.0.1.12, Hi"
+					if (Blockline.toUpperCase(Locale.US).contains(q.servercall.toUpperCase(Locale.US))) {
+						//Pattern ppc = Pattern.compile(".*(\\d\\.\\d).*\\-\\d+:\\d+:(\\d+)\\-(.*)M(\\d+)");
 						Pattern ppc = Pattern.compile(".*\\S+\\s\\S+\\s(\\S{3}).*\\-\\d+:\\d+:(\\d+)\\-(.*)M(\\d+)");
 						//System.out.println(Blockline);
 						Matcher mpc = ppc.matcher(Blockline);
-
 						connectsecond = "";
 						String localmail = "";
 						if (mpc.lookingAt()) {
@@ -508,15 +481,12 @@ static String[] AltModes = {"       ","THOR8","MFSK16","THOR22",
 								//System.out.println("success");
 								sm.hispubkey = mpc.group(4);
 								hispubkey = sm.hispubkey;
-
 								cr = new crypt();
-
 								String output = cr.encrypt (sm.hispubkey, Passwrd);
-
 								Processor.TX_Text += "~Mp" + output + "\n";
 							}
 						} else {
-							Pattern pps = Pattern.compile(".*"+q.servercall+" V(\\d{1,2}\\.\\d{1,2}\\.\\d{1,2})(.\\d{1,2}){0,1}, Hi.*");
+							Pattern pps = Pattern.compile(".*"+q.servercall+" V(\\d{1,2}\\.\\d{1,2}\\.\\d{1,2})(.\\d{1,2}){0,1}, Hi.*", Pattern.CASE_INSENSITIVE);
 							//System.out.println(Blockline);
 							Matcher mps = pps.matcher(Blockline);
 							if (mps.lookingAt()) {
@@ -526,66 +496,6 @@ static String[] AltModes = {"       ","THOR8","MFSK16","THOR22",
 					}
 
 				}
-
-
-/*
-				//New version for Perl AND Java Server
-                if (!Connected & Blockline.contains("QSL") & Blockline.toUpperCase(Locale.US).contains(q.callsign.toUpperCase(Locale.US))) {
-                    String pCheck = "";
-                    //Pattern psc = Pattern.compile(".*de ([A-Z0-9\\-]+)\\s(?:(\\d*)|((\\d+)\\s+(\\d+))\\s)([0123456789ABCDEF]{4}).*");
-                    Pattern psc = Pattern.compile(".*de ([A-Z0-9\\-]+)\\s*(?:(?:(\\d+\\s)(\\d+\\s))|(\\d*\\s))([0123456789ABCDEF]{4}).*");
-                    Matcher msc = psc.matcher(Blockline);
-                    String scall = "";
-                    String rx_snr = "";
-                    String numberOfMails = "";
-                    if (msc.lookingAt()) {
-                        scall = msc.group(1);
-                        if (msc.group(4) != null) {
-                            rx_snr = msc.group(4).trim();
-                        } else {
-                            rx_snr = msc.group(2).trim();
-                            numberOfMails = msc.group(3).trim();
-                        }
-                        pCheck = msc.group(5);
-                    }
-                    // fill the servers drop down list
-                    char soh = 1;
-                    String sohstr = Character.toString(soh);
-                    String checkstring = "";
-                    String displayString = "";
-                    if (rx_snr.equals("")) {
-                        checkstring = sohstr + "00uQSL " + q.callsign + " de " + scall + " ";
-                    } else if (!rx_snr.equals("") && !numberOfMails.equals("")) {
-                        checkstring = sohstr + "00uQSL " + q.callsign + " de " + scall + " " + rx_snr + " " + numberOfMails + " ";
-                        //System.out.println("RX_SNR:" + rx_snr);
-                        displayString = "From " + scall + ": " + rx_snr + "%, " + numberOfMails + " mails\n";
-                        //setrxdata(scall, Integer.parseInt(rx_snr));
-                    } else if (!rx_snr.equals("") && numberOfMails.equals("")) {
-                        checkstring = sohstr + "00uQSL " + q.callsign + " de " + scall + " " + rx_snr + " ";
-                        //System.out.println("RX_SNR:" + rx_snr);
-                        displayString = "From " + scall + ": " + rx_snr + "%\n";
-                        //setrxdata(scall, Integer.parseInt(rx_snr));
-                    }
-                    //Display in APRS Window, even if not valid block
-                    Processor.APRSwindow += "\n" + displayString;
-                    AndPskmail.mHandler.post(AndPskmail.addtoAPRS);
-                    String check = q.checksum(checkstring);
-                    if (check.equals(pCheck)) {
-                        rxb.get_serverstat(scall);
-                        int i = 0;
-                        boolean knownserver = false;
-                        for (i = 0; i < 10; i++) {
-                            //                              System.out.println(Servers[i] + scall);
-                            if (scall.equals(Servers[i])) {
-                                knownserver = true;
-                                break;
-                            }
-                        }
-                        //if (!knownserver) {
-                            //Android, not yet mainui.addServer(scall); // add to servers drop down list
-                        //}
-                    } else
-*/
 				//New version for Perl AND Java Server
 				//if (!Connected && Blockline.contains("QSL") & Blockline.toUpperCase(Locale.US).contains(q.callsign.toUpperCase(Locale.US))) {
 				if (!Connected && Blockline.contains("QSL") && Blockline.contains(" de ")) {
@@ -1212,7 +1122,7 @@ static String[] AltModes = {"       ","THOR8","MFSK16","THOR22",
 			ModemPreamble = AndPskmail.myconfig.getPreference("MODEMPREAMBLE");
 			ModemPostamble = AndPskmail.myconfig.getPreference("MODEMPOSTAMBLE");
 			// Mail settings
-			compressedmail = AndPskmail.myconfig.getPreferenceB("COMPRESSED");
+			//compressedmail = AndPskmail.myconfig.getPreferenceB("COMPRESSED");
 			String profile = AndPskmail.myconfig.getPreference("BLOCKLENGTH");
 			CurrentModemProfile = profile;
 			Character c =  profile.charAt(0);

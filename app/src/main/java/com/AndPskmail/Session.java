@@ -2105,7 +2105,7 @@ public class Session {
 	}
 
 	void sendRead(String mailnr) {
-		if (Processor.compressedmail)  {
+		if (AndPskmail.myconfig.getPreferenceB("COMPRESSED"))  {
 			Processor.TX_Text += "~READZIP " + mailnr + "\n"; 
 		} else {
 			Processor.TX_Text += "~READ " + mailnr + "\n";   

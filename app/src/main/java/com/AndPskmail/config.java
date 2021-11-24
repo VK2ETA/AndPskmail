@@ -623,6 +623,32 @@ public class config {
     }
 
 
+    //Reads an integer from preferences, with default value
+    public static int getPreferenceI(String Key, int Default) {
+        int myReturn = 0;
+        String myPref = "";
+
+        try {
+            myPref = AndPskmail.mysp.getString(Key, "");
+            if (myPref.equals("")) {
+                myReturn = Default;
+            } else {
+                //Try integer conversion
+                try {
+                    myReturn = Integer.parseInt(myPref);
+                } catch (NumberFormatException ex) {
+                    //Return zero is probably the best logic here since we cannot interract with the user anyway
+                    loggingclass.writelog("Cannot convert preference [" + Key + "] to a number" + ex.getMessage(),
+                            null, true);
+                    myReturn = Default;
+                }
+            }
+        } catch (Exception e) {
+            myReturn = Default;
+        }
+        return myReturn;
+    }
+
 
     //Backup all preferences to file
     public static boolean saveSharedPreferencesToFile(String fileName) {
