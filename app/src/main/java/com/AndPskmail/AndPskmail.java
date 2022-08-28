@@ -47,6 +47,7 @@ import android.bluetooth.BluetoothDevice;
 import android.content.BroadcastReceiver;
 import android.content.IntentFilter;
 import android.content.pm.PackageManager;
+import android.hardware.usb.UsbDevice;
 import android.location.OnNmeaMessageListener;
 import android.net.Uri;
 import android.os.Build;
@@ -125,6 +126,16 @@ import android.support.v7.app.AppCompatActivity;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 
+//USB interface management
+import java.util.List;
+import android.app.PendingIntent;
+import android.hardware.usb.UsbDeviceConnection;
+import android.hardware.usb.UsbManager;
+import com.hoho.android.usbserial.driver.UsbSerialDriver;
+import com.hoho.android.usbserial.driver.UsbSerialPort;
+import com.hoho.android.usbserial.driver.UsbSerialProber;
+
+
 
 //public class AndPskmail extends Activity {
 public class AndPskmail extends AppCompatActivity {
@@ -180,7 +191,7 @@ public class AndPskmail extends AppCompatActivity {
     static int currentview = TERMVIEW;
 
     //Toast text display (declared here to allow for quick replacement rather than queuing)
-    private Toast myToast;
+    private static Toast myToast;
 
 
     // Layout Views
@@ -258,6 +269,15 @@ public class AndPskmail extends AppCompatActivity {
     private TelephonyManager tmgr = null;
     //Bluetooth Audio devices
     public static BroadcastReceiver mReceiver = null;
+
+    //USB serial interface
+    private static final String ACTION_USB_PERMISSION = "com.AndPskmail.USB_PERMISSION";
+    public static UsbSerialPort usbSerialPort = null;
+    public enum UsbPermission { Unknown, Requested, Granted, Denied };
+    public static UsbPermission usbPermission = UsbPermission.Unknown;
+    public static final String INTENT_ACTION_GRANT_USB = BuildConfig.APPLICATION_ID + ".GRANT_USB";
+    //Lock for updating the receive display buffer (Concurrent updates with the Modem thread)
+    public static final Object lockUSB = new Object();
 
     //  Broadcast receiver for Bluetooth  broadcasts
     //	private final BroadcastReceiver myBroadcastReceiver = new mBroadcastReceiver();
@@ -1040,7 +1060,7 @@ public class AndPskmail extends AppCompatActivity {
         // Create handler for periodic beacons and links
         myHandler = new Handler();
 
-        //Monitor the connection of Bluetooth between devices
+        //Monitor the connection of Bluetooth between devices and USB connections
         mReceiver = new BroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {
@@ -1111,6 +1131,30 @@ public class AndPskmail extends AppCompatActivity {
                     //topToastText("Bluetooth SCO Connecting");
                 } else if ( extraSCO == AudioManager.SCO_AUDIO_STATE_DISCONNECTED){
                     topToastText("Bluetooth Device Disconnected");
+                } else if (ACTION_USB_PERMISSION.equals(action) || INTENT_ACTION_GRANT_USB.equals(intent.getAction())) {
+                    synchronized (lockUSB) {
+                        //debug Modem.appendToModemBuffer("Authorisation requested");
+                        UsbDevice device = (UsbDevice) intent.getParcelableExtra(UsbManager.EXTRA_DEVICE);
+
+                        if (intent.getBooleanExtra(UsbManager.EXTRA_PERMISSION_GRANTED, false)) {
+                            if (device != null) {
+
+                                boolean pttViaRTS = myconfig.getPreferenceB("RTSASPTT", false);
+                                boolean pttViaDTR = myconfig.getPreferenceB("DTRASPTT", false);
+                                boolean pttViaCAT = myconfig.getPreferenceB("CATASPTT", false);
+                                if (pttViaRTS | pttViaDTR | pttViaCAT) {
+                                    //if required, initialised the USB Serial port
+                                    usbPermission = intent.getBooleanExtra(UsbManager.EXTRA_PERMISSION_GRANTED, false)
+                                            ? UsbPermission.Granted : UsbPermission.Denied;
+                                    //debug Modem.appendToModemBuffer("Trying to connect");
+                                    connectUsbDevice();
+                                }
+                            }
+
+                        } else {
+                            //debug Modem.appendToModemBuffer("Permission denied for device " + device);
+                        }
+                    }
                 } else {
                     topToastText("Other Bluetooth Action");
                 }
@@ -1118,11 +1162,13 @@ public class AndPskmail extends AppCompatActivity {
 
         };
 
-        //Bluetooth File transfers (Receiving listener)
+        //Bluetooth File transfers (Receiving listener) and USB device connections on OTG
         IntentFilter filter = new IntentFilter(BluetoothDevice.ACTION_ACL_DISCONNECTED);
         filter.addAction(BluetoothDevice.ACTION_ACL_CONNECTED);
         //if (android.os.Build.VERSION.SDK_INT >= 14) {
         filter.addAction(AudioManager.ACTION_SCO_AUDIO_STATE_UPDATED);
+        filter.addAction(ACTION_USB_PERMISSION);
+        filter.addAction(INTENT_ACTION_GRANT_USB);
         // } else {
         // test filter.addAction(AudioManager.ACTION_SCO_AUDIO_STATE_CHANGED);
         //}
@@ -1432,12 +1478,25 @@ public class AndPskmail extends AppCompatActivity {
     @Override
     public void onResume() {
         super.onResume();
+
+        // Store preference reference for later (config.java)
+        mysp = PreferenceManager.getDefaultSharedPreferences(this);
+        String mypath = Processor.HomePath + Processor.Dirprefix;
+        myconfig = new config(mypath);
         //Save the values of key fields when we quit the current application (calling another application or pressing the back button)
         if (currentview == APRSVIEW) {
             TextView view = (TextView) findViewById(R.id.edit_text_out);
             if (view != null) {
                 view.setText(savedAprsMessage);
             }
+        }
+        //USB device init if required
+        boolean pttViaRTS = myconfig.getPreferenceB("RTSASPTT", false);
+        boolean pttViaDTR = myconfig.getPreferenceB("DTRASPTT", false);
+        boolean pttViaCAT = myconfig.getPreferenceB("CATASPTT", false);
+        if (pttViaRTS | pttViaDTR | pttViaCAT) {
+            //if required, initialised the USB Serial port
+            connectUsbDevice();
         }
     }
 
@@ -1458,6 +1517,61 @@ public class AndPskmail extends AppCompatActivity {
         //Remove the queued beacons and link requests
         myHandler.removeCallbacks(sendAndRequeueLink);
         myHandler.removeCallbacks(sendAndRequeueBeacon);
+    }
+
+
+    //Connect to USB Serial device if present
+    private void connectUsbDevice() {
+
+        synchronized (lockUSB) {
+            // Find all available drivers from attached devices.
+            UsbManager manager = (UsbManager) getSystemService(Context.USB_SERVICE);
+            List<UsbSerialDriver> availableDrivers = UsbSerialProber.getDefaultProber().findAllDrivers(manager);
+            if (availableDrivers.isEmpty()) {
+                middleToastText("PTT via Serial Port Requested, But No Supported Device Found");
+                return;
+            }
+
+            // Open a connection to the first available driver.
+            UsbSerialDriver driver = availableDrivers.get(0);
+            UsbDeviceConnection connection = manager.openDevice(driver.getDevice());
+
+        /*
+        if (connection == null) {
+            // add UsbManager.requestPermission(driver.getDevice(), ..) handling here
+            middleToastText("Permission not granted. Disconnect / Reconnect");
+            return;
+        }
+        */
+
+            if (connection == null && usbPermission == UsbPermission.Unknown && !manager.hasPermission(driver.getDevice())) {
+                //middleToastText("Intent to Request Permission");
+                usbPermission = UsbPermission.Requested;
+                PendingIntent usbPermissionIntent = PendingIntent.getBroadcast(myContext, 0, new Intent(INTENT_ACTION_GRANT_USB), 0);
+                manager.requestPermission(driver.getDevice(), usbPermissionIntent);
+                return;
+            }
+            if (connection == null) {
+                if (!manager.hasPermission(driver.getDevice()))
+                    middleToastText("USB Permission Denied");
+                else
+                    middleToastText("USB connection failed");
+                return;
+            }
+
+            if (usbSerialPort == null || (usbSerialPort != null && !usbSerialPort.isOpen())) {
+                usbSerialPort = driver.getPorts().get(0); // Most devices have just one usbSerialPort (usbSerialPort 0)
+                try {
+                    usbSerialPort.open(connection);
+                    usbSerialPort.setParameters(115200, 8, UsbSerialPort.STOPBITS_1, UsbSerialPort.PARITY_NONE);
+                    //usbSerialPort.setRTS(<default here>);
+                    //Same for DTR
+                    middleToastText("USB Serial Initialised.");
+                } catch (IOException e) {
+                    middleToastText("Error at USB serial init: " + e);
+                }
+            }
+        }
     }
 
 
@@ -1898,7 +2012,7 @@ public class AndPskmail extends AppCompatActivity {
 
 
     // Simple text transparent popups (bottom of screen)
-    public void topToastText(String message) {
+    public static void topToastText(String message) {
         try {
             if (Build.VERSION.SDK_INT >= 28 && myToast.getView().isShown()) {
                 myToast.cancel();
@@ -1916,7 +2030,7 @@ public class AndPskmail extends AppCompatActivity {
 
 
     // Simple text transparent popups TOWARDS MIDDLE OF SCREEN
-    public void middleToastText(String message) {
+    public static void middleToastText(String message) {
         try {
             if (Build.VERSION.SDK_INT >= 28 && myToast.getView().isShown()) {
                 myToast.cancel();
@@ -1933,7 +2047,7 @@ public class AndPskmail extends AppCompatActivity {
 
 
     // Simple text transparent popups
-    public void bottomToastText(String message) {
+    public static void bottomToastText(String message) {
         try {
             if (Build.VERSION.SDK_INT >= 28 && myToast.getView().isShown()) {
                 myToast.cancel();

@@ -16,10 +16,13 @@
 package com.AndPskmail;
 
 import android.Manifest;
+import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.hardware.usb.UsbDeviceConnection;
+import android.hardware.usb.UsbManager;
 import android.media.AudioFormat;
 import android.media.AudioManager;
 import android.media.AudioRecord;
@@ -27,6 +30,13 @@ import android.media.AudioTrack;
 import android.media.MediaRecorder.AudioSource;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
+
+import com.hoho.android.usbserial.driver.UsbSerialDriver;
+import com.hoho.android.usbserial.driver.UsbSerialPort;
+import com.hoho.android.usbserial.driver.UsbSerialProber;
+
+import java.io.IOException;
+import java.util.List;
 
 
 public class Modem {
@@ -694,6 +704,8 @@ my %modelist = ("0" => "default",
                             loggingclass.writelog("Wrong TX Mode called: " + Processor.TxModem.toString() , null, true);
                         }
 
+                        //Ptt ON
+                        setPtt();
                         //Init sound system
                         txSoundInInit();
 
@@ -716,6 +728,8 @@ my %modelist = ("0" => "default",
                         Processor.q.send_txrsid_command("OFF");
                         //Release sound systems
                         txSoundRelease();
+                        //Ptt OFF
+                        resetPtt();
                         //Restart modem reception
                         unPauseRxModem();
                         Processor.TXActive = false;
@@ -732,6 +746,170 @@ my %modelist = ("0" => "default",
     };
 
 
+    //Connect to USB Serial device if present
+    private static void connectUsbDevice() {
+
+        synchronized (AndPskmail.lockUSB) {
+            // Find all available drivers from attached devices.
+            UsbManager manager = (UsbManager) AndPskmail.myContext.getSystemService(Context.USB_SERVICE);
+            List<UsbSerialDriver> availableDrivers = UsbSerialProber.getDefaultProber().findAllDrivers(manager);
+            if (availableDrivers.isEmpty()) {
+                AndPskmail.middleToastText("PTT via Serial Port Requested, But No Supported Device Found");
+                return;
+            }
+
+            // Open a connection to the first available driver.
+            UsbSerialDriver driver = availableDrivers.get(0);
+            UsbDeviceConnection connection = manager.openDevice(driver.getDevice());
+
+            /*
+            if (connection == null) {
+                // add UsbManager.requestPermission(driver.getDevice(), ..) handling here
+                middleToastText("Permission not granted. Disconnect / Reconnect");
+                return;
+            }
+            */
+            //Processor.PostToModem("Connection :" + connection == null ? " Null" : connection.toString());
+
+            if (connection == null && AndPskmail.usbPermission == AndPskmail.UsbPermission.Unknown && !manager.hasPermission(driver.getDevice())) {
+                //debug appendToModemBuffer("Requesting permission");
+                AndPskmail.usbPermission = AndPskmail.UsbPermission.Requested;
+                PendingIntent usbPermissionIntent = PendingIntent.getBroadcast(AndPskmail.myContext, 0, new Intent(AndPskmail.INTENT_ACTION_GRANT_USB), 0);
+                manager.requestPermission(driver.getDevice(), usbPermissionIntent);
+                return;
+            }
+            if (connection == null) {
+                if (!manager.hasPermission(driver.getDevice())) {
+                    AndPskmail.middleToastText("USB Permission Denied");
+                    //debug appendToModemBuffer("USB Permission Denied");
+                } else {
+                    AndPskmail.middleToastText("USB connection failed");
+                    //debug appendToModemBuffer("USB connection failed");
+                }
+                return;
+            }
+
+            //Always open regardless
+            // if (AndPskmail.usbSerialPort == null || (AndPskmail.usbSerialPort != null && !AndPskmail.usbSerialPort.isOpen())) {
+            AndPskmail.usbSerialPort = driver.getPorts().get(0); // Most devices have just one usbSerialPort (usbSerialPort 0)
+            try {
+                AndPskmail.usbSerialPort.open(connection);
+                AndPskmail.usbSerialPort.setParameters(115200, 8, UsbSerialPort.STOPBITS_1, UsbSerialPort.PARITY_NONE);
+                //usbSerialPort.setRTS(<default here>);
+                //Same for DTR
+                AndPskmail.middleToastText("USB Serial Initialised.");
+                //debug appendToModemBuffer("USB Serial Initialised.");
+            } catch (IOException e) {
+                AndPskmail.middleToastText("Error at USB serial init: " + e);
+                //debug appendToModemBuffer("Error at USB serial init: " + e);
+            }
+            //}
+        }
+    }
+
+
+    //Send the PTT command and tries to recover if an error is detected
+    private static void sendPttCommand(boolean PttOnOff) {
+
+        boolean pttViaRTS = AndPskmail.myconfig.getPreferenceB("RTSASPTT", false);
+        boolean pttViaDTR = AndPskmail.myconfig.getPreferenceB("DTRASPTT", false);
+        boolean pttViaCAT = AndPskmail.myconfig.getPreferenceB("CATASPTT", false);
+        String switchStr = PttOnOff ? "ON" : "OFF";
+        try {
+            if (pttViaRTS) {
+                AndPskmail.usbSerialPort.setRTS(PttOnOff);
+            }
+            if (pttViaDTR) {
+                AndPskmail.usbSerialPort.setDTR(PttOnOff);
+            }
+            if (pttViaCAT) {
+                //Send Cat PTT ON Command
+            }
+            //Debug  Processor.PostToModem("PTT command " + switchStr + " sent ok");
+        } catch (IOException e) {
+            //debug appendToModemBuffer("IO Exception in PTT " + switchStr + " : " + e.getMessage().toString());
+            //Try to re-connect just in time
+            connectUsbDevice();
+            try {
+                if (pttViaRTS) {
+                    AndPskmail.usbSerialPort.setRTS(PttOnOff);
+                }
+                if (pttViaDTR) {
+                    AndPskmail.usbSerialPort.setDTR(PttOnOff);
+                }
+                if (pttViaCAT) {
+                    //Send Cat PTT ON Command
+                }
+                //debug appendToModemBuffer("PTT command " + switchStr + " sent ok");
+            } catch (IOException e1) {
+                //debug appendToModemBuffer("2nd IO Exception in PTT " + switchStr+ " : " + e1.getMessage().toString());
+                //give up
+                // Try to re-connect
+                //connectUsbDevice();
+            }
+
+        }
+
+    }
+
+
+    private static void setPtt() {
+
+        //Rig control for PTT (RTS/DTR/CAT Command)
+        boolean pttViaRTS = AndPskmail.myconfig.getPreferenceB("RTSASPTT", false);
+        boolean pttViaDTR = AndPskmail.myconfig.getPreferenceB("DTRASPTT", false);
+        boolean pttViaCAT = AndPskmail.myconfig.getPreferenceB("CATASPTT", false);
+        if (pttViaRTS | pttViaDTR | pttViaCAT) {
+            //Send PTT ON command if possible
+            if (AndPskmail.usbSerialPort != null && AndPskmail.usbSerialPort.isOpen()) {
+                //debug appendToModemBuffer("Request PTT ON");
+                sendPttCommand(true);
+            }
+            //Delay Audio for required period
+            int audioSendDelay = AndPskmail.myconfig.getPreferenceI("AUDIODELAYAFTERPTT", 0);
+            //Max 5 seconds
+            if (audioSendDelay > 5000) {
+                audioSendDelay = 5000;
+            }
+            if (audioSendDelay > 0) {
+                try {
+                    Thread.sleep(audioSendDelay);
+                } catch (InterruptedException e) {
+                    //e.printStackTrace();
+                }
+            }
+        }
+    }
+
+
+    private static void resetPtt() {
+
+        //Rig control for PTT (RTS/DTR/CAT Command)
+        boolean pttViaRTS = AndPskmail.myconfig.getPreferenceB("RTSASPTT", false);
+        boolean pttViaDTR = AndPskmail.myconfig.getPreferenceB("DTRASPTT", false);
+        boolean pttViaCAT = AndPskmail.myconfig.getPreferenceB("CATASPTT", false);
+        //Release PTT
+        if (pttViaRTS | pttViaDTR | pttViaCAT) {
+            //Delay PTT Release
+            int pttReleaseDelay = AndPskmail.myconfig.getPreferenceI("PTTDELAYAFTERAUDIO", 0);
+            //Max 5 seconds
+            if (pttReleaseDelay > 5000) {
+                pttReleaseDelay = 5000;
+            }
+            if (pttReleaseDelay > 0) {
+                try {
+                    Thread.sleep(pttReleaseDelay);
+                } catch (InterruptedException e) {
+                    //e.printStackTrace();
+                }
+            }
+            //Send PTT OFF command if possible
+            if (AndPskmail.usbSerialPort != null && AndPskmail.usbSerialPort.isOpen()) {
+                //debug appendToModemBuffer("Request PTT OFF");
+                sendPttCommand(false);
+            }
+        }
+    }
 
 
     //Send Tune in a separate thread so that the UI thread is not blocked
@@ -789,6 +967,8 @@ my %modelist = ("0" => "default",
             txAudioTrack.play();
             */
 
+            //Ptt ON
+            setPtt();
             //Init sound system
             txSoundInInit();
 
@@ -843,7 +1023,8 @@ my %modelist = ("0" => "default",
 
             //Release sound systems
             txSoundRelease();
-
+            //Ptt OFF
+            resetPtt();
             Processor.TXActive = false;
 
             //Restart the modem receiving side

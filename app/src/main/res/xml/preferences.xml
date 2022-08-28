@@ -150,9 +150,38 @@
             android:summary="Block Length"
             android:title="Block Length" android:enabled="false" android:selectable="false">
         </ListPreference>
-
     </PreferenceScreen>
-
+    <PreferenceScreen
+        android:key="rigcontrolPS"
+        android:title="@string/pref_RIGCONTROL">
+        <PreferenceCategory
+            android:key="PttCategory"
+            android:title="@string/pref_PttMethod">
+            <CheckBoxPreference
+                android:defaultValue="false"
+                android:key="RTSASPTT"
+                android:title="@string/pref_RtsIsPttSignalLine" />
+            <CheckBoxPreference
+                android:defaultValue="false"
+                android:key="DTRASPTT"
+                android:title="@string/pref_DtrIsPttSignalLine" />
+            <CheckBoxPreference
+                android:enabled="false"
+                android:defaultValue="false"
+                android:key="CATASPTT"
+                android:title="@string/pref_CatIsPtt" />
+            <EditTextPreference
+                android:defaultValue="0"
+                android:key="AUDIODELAYAFTERPTT"
+                android:summary="@string/pref_DelayInMsecBeforeStartingAudio"
+                android:title="@string/pref_StartOfTransmitPttDelay" />
+            <EditTextPreference
+                android:defaultValue="0"
+                android:key="PTTDELAYAFTERAUDIO"
+                android:summary="@string/pref_DelayInMsecBeforeReleasingPtt"
+                android:title="@string/pref_EndtOfTransmitPttDelay" />
+        </PreferenceCategory>
+    </PreferenceScreen>
     <PreferenceScreen
         android:key="aprsPS"
         android:title="APRS" >
