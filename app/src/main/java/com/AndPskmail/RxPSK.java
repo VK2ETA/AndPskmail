@@ -315,7 +315,9 @@ public class RxPSK {
 	        	c = PSKVariCode.psk_varicode_decode ( shreg >> 2 );
 	        	if ( c != -1 )  //-1 kein Varicode
 	        	{
-	                    c &= 0x7F;
+	        		//Add UTF-8 support
+					//c &= 0x7F;
+					c &= 0xFF;
 	//                    System.out.print(PSKVariCode.getAscii(c));
 	//                    if(c == 4)
 	//                        System.out.println();

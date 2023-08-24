@@ -36,6 +36,8 @@ import com.hoho.android.usbserial.driver.UsbSerialPort;
 import com.hoho.android.usbserial.driver.UsbSerialProber;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 
@@ -87,6 +89,13 @@ public class Modem {
 
 
     public static boolean stopTX = false;
+
+    //UTF-8 handling
+    private static int utfExpectedChars = 0;
+    private static int utfFoundChars = 0;
+    private static byte[] utf8PartialBuffer = new byte[20];
+    private static int utfLen = 0;
+
 
 
     public Modem () {
@@ -492,17 +501,13 @@ my %modelist = ("0" => "default",
     }
 
 
-    public static void rxblock (char inChar) {
-
+    static void makeBlock(char inChar) {
         if (!Processor.Connected & !Processor.Connecting) {
             Processor.DCD = Processor.MAXDCD;
         }
         //Save the time of the last character received
         lastCharacterTime = System.currentTimeMillis();
-        if (inChar > 127) {
-            // todo: unicode encoding
-            inChar = 0;
-        }
+
         switch (inChar) {
             case 0:
                 break; // do nothing
@@ -566,6 +571,83 @@ my %modelist = ("0" => "default",
                 break;
         }
         // end switch
+    }
+
+
+    public static void rxblock (char inChar) {
+
+        //UTF-8 handling
+        //Only send complete UTF-8 sequences
+        //Behaviour on invalid combinations: discard and re-sync only on valid characters to
+        //  avoid exceptions in upstream methods.
+        if (utfExpectedChars < 1) { //Normally zero
+            //We are not in a multi-byte sequence yet
+            if ((inChar & 0xE0) == 0xC0) {
+                utfExpectedChars = 1; //One extra characters
+                utfLen = 2;
+                utfFoundChars = 0;
+                utf8PartialBuffer[utfFoundChars++] = (byte)inChar;
+                inChar = 0; //No further processing
+            } else if ((inChar & 0xF0) == 0xE0) {
+                utfExpectedChars = 2; //Two extra characters
+                utfLen = 3;
+                utfFoundChars = 0;
+                utf8PartialBuffer[utfFoundChars++] = (byte)inChar;
+                inChar = 0; //No further processing
+            } else if ((inChar & 0xF8) == 0xF0) {
+                utfExpectedChars = 3; //Three extra characters
+                utfLen = 4;
+                utfFoundChars = 0;
+                utf8PartialBuffer[utfFoundChars++] = (byte)inChar;
+                inChar = 0; //No further processing
+            } else if ((inChar & 0xC0) == 0x80) { //Is it a follow-on character?
+                //Should not be there (missing first character in sequence), discard and reset just in case
+                utfExpectedChars = utfFoundChars = utfLen = 0;
+                inChar = 0; //No further processing
+            } else if ((inChar & 0x80) == 0x00) { //Could be a single Character, check it is legal
+                makeBlock(inChar);
+                //decodedBuffer[lastCharPos++] = inChar;
+                //    utf8PartialBuffer[utfFoundChars++] = inChar;
+                //test no. utfExpectedChars = utfFoundChars = 0; //Reset to zero in case counter is negative (just in case)
+                //} else { //Not a legal case, ignore and reset counter
+                //utfExpectedChars = utfFoundChars = 0;
+                //inChar = 0; //Blank that character
+            }
+        } else { //we are still expecting follow-up UTF-8 characters
+            if ((inChar & 0xC0) == 0x80) { //Valid follow-on character, store it
+                utfExpectedChars--;
+                utf8PartialBuffer[utfFoundChars++] = (byte)inChar;
+                //Check if we have the whole sequence
+                if (utfExpectedChars == 0 && utfFoundChars >= utfLen) {
+                    //Add to data string
+                    utf8PartialBuffer[utfFoundChars] = 0;
+                    String utfDataPoint = StandardCharsets.UTF_8.decode(ByteBuffer.wrap(utf8PartialBuffer, 0, utfLen)).toString();
+                    // Add to string buffer
+                    for (int i = 0; i < utfDataPoint.length(); i++) {
+                        makeBlock(utfDataPoint.charAt(i));
+                    }
+                    utfExpectedChars = utfFoundChars = utfLen = 0;
+                        //BlockString += utfDataPoint;
+                        //WriteToMonitor(utfDataPoint);
+                        //Main.lastCharacterTime = System.currentTimeMillis();
+                        //No need to update the display, the next non-utf character will trigger an update
+                }
+                inChar = 0; //No further processing
+            } else { //Invalid sequence, discard it and start from scratch
+                utfExpectedChars = utfFoundChars = utfLen = 0;
+                inChar = 0; //No further processing
+            }
+            // NO, done above
+            //If we have a complete sequence, add to receive buffer
+            //if (utfExpectedChars < 1 && utfFoundChars > 0) {
+            //    for (int i = 0; i < utfFoundChars; i++) {
+            //        decodedBuffer[lastCharPos++] = utf8PartialBuffer[i];
+            //    }
+            //    utfExpectedChars = utfFoundChars = 0; //Reset
+            //}
+        }
+
+
     }
 
 

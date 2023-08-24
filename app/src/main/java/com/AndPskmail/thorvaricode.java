@@ -158,9 +158,10 @@ static int thorvaridec(int symbol)
 	if (symbol < 0xB80)
 		return mfskVaricode.varidec(symbol);  // find in the MFSK decode table	
 
-	for (i = 0; i < 92; i++)
-		if (symbol == thor_varidecode[i])
-			return (' ' + i + 0x100);  // found in the extended decode table
+	//Otherwise ignore character (no use of extended codes as there are no dead time in ARQ exchanges)
+	//for (i = 0; i < 92; i++)
+	//	if (symbol == thor_varidecode[i])
+	//		return (' ' + i + 0x100);  // found in the extended decode table
 			
 	return -1;                   // not found
 }

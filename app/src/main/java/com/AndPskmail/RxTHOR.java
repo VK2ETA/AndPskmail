@@ -322,8 +322,8 @@ public class RxTHOR {
     void recvchar(int c) {
         if (c == -1) {
             return;
-        }
-        if ((c & 0x100) == 0x100) {
+        //}
+        //if ((c & 0x100) == 0x100) {
         	//NO secondary characters for the time being (no use for it in ARQ)
         	//		put_sec_char(c & 0xFF);
         } else {
@@ -362,7 +362,9 @@ public class RxTHOR {
 
 //	shreg = (shreg << 1) | !!bit;
 //        datashreg = ((datashreg << 1) & 0xFFFF) | (bit == 0? 1 : 0);
-        datashreg = ((datashreg << 1) & 0xFFF) | (bit == 0 ? 0 : 1);
+        //VK2ETA UTF-8 support
+        //datashreg = ((datashreg << 1) & 0xFFF) | (bit == 0 ? 0 : 1);
+        datashreg = ((datashreg << 1) & 0xFFFF) | (bit == 0 ? 0 : 1);
 
 
         if ((datashreg & 7) == 1) {
