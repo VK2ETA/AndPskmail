@@ -1,0 +1,2 @@
+# AndPskmail
+Android app to access Pskmail servers to exchange emails, download web pages text, report positions and send APRS messages. Compatible with the Java Pskmail server. To install, download the .apk file in the Releases section into a device then use a file manager to install. May require that "Install unknown apps" be selected in the Security section of the device. Refer to the manual in the Releases section for detailed information.
