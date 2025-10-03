@@ -1997,6 +1997,17 @@ public class Session {
 		Blocklength = NewBlocklength;
 	}
 
+	//UTF strings handling
+	private int lengthCodepoints(String s) {
+		return s.codePointCount(0, s.length());
+	}
+
+	private static String substringCodepoint(String s, int startCodepoint, int numCodepoints) {
+		int startIndex = s.offsetByCodePoints(0, startCodepoint);
+		int endIndex = s.offsetByCodePoints(startIndex, numCodepoints);
+		return s.substring(startIndex, endIndex);
+	}
+
 	public String doTXbuffer(){
 
 		String Outbuffer = "";
@@ -2039,15 +2050,19 @@ public class Session {
 				Blocklength = 6;
 			}
 			double bl  = Math.pow(2, Blocklength);
-			int queuelen = Processor.TX_Text.length();
+			//UTF-8 Handling. Use codepoints instead of raw string length
+			//int queuelen = Processor.TX_Text.length();
+			int queuelen = lengthCodepoints(Processor.TX_Text);
 
 			if (queuelen > 0){
 				if (queuelen <= (int) bl) {
 					newstring = Processor.TX_Text;
 					Processor.TX_Text = "";
 				} else {
-					newstring = Processor.TX_Text.substring(0,(int)bl );
-					Processor.TX_Text = Processor.TX_Text.substring((int)bl);
+					//newstring = Processor.TX_Text.substring(0,(int)bl );
+					newstring = substringCodepoint(Processor.TX_Text, 0, (int) bl);
+					//Processor.TX_Text = Processor.TX_Text.substring((int)bl);
+					Processor.TX_Text = substringCodepoint(Processor.TX_Text, (int) bl, queuelen - (int) bl);
 				}
 
 				//            lastqueued += 1;

@@ -14,7 +14,7 @@
 
 package com.AndPskmail;
 
-/**
+/*
  *
  * @author John Douyere <vk2eta@gmail.com>
  */
@@ -58,10 +58,11 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.OnSharedPreferenceChangeListener;
+import android.os.Looper;
 import android.preference.PreferenceManager;
 import android.provider.ContactsContract.CommonDataKinds.Email;
-import android.support.v4.app.NotificationCompat;
-import android.support.v4.app.TaskStackBuilder;
+//import android.support.v4.app.NotificationCompat;
+//import android.support.v4.app.TaskStackBuilder;
 import android.telephony.PhoneStateListener;
 import android.telephony.TelephonyManager;
 import android.text.Editable;
@@ -122,22 +123,28 @@ import android.provider.ContactsContract.Contacts;
 import android.view.animation.*;
 
 //Support library for runtime permissions and notifications
-import android.support.v7.app.AppCompatActivity;
-import android.support.v4.app.ActivityCompat;
-import android.support.v4.content.ContextCompat;
+//import android.support.v7.app.AppCompatActivity;
+//import android.support.v4.app.ActivityCompat;
+//import android.support.v4.content.ContextCompat;
 
 //USB interface management
 import java.util.List;
 import android.app.PendingIntent;
 import android.hardware.usb.UsbDeviceConnection;
 import android.hardware.usb.UsbManager;
+
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
+import androidx.core.app.NotificationCompat;
+import androidx.core.app.TaskStackBuilder;
+import androidx.core.content.ContextCompat;
+
 import com.hoho.android.usbserial.driver.UsbSerialDriver;
 import com.hoho.android.usbserial.driver.UsbSerialPort;
 import com.hoho.android.usbserial.driver.UsbSerialProber;
 
 
 
-//public class AndPskmail extends Activity {
 public class AndPskmail extends AppCompatActivity {
 
     private static boolean havePassedAllPermissionsTest = false;
@@ -249,7 +256,9 @@ public class AndPskmail extends AppCompatActivity {
     public static ArrayAdapter<String> MailArrayAdapter;
 
     // Need handler for callbacks to the UI thread
-    public static final Handler mHandler = new Handler();
+    //Updated declaration. Resolves delayed updates of the modem screen
+    //public static final Handler mHandler = new Handler();
+    public static final Handler mHandler = new Handler(Looper.getMainLooper());
 
     // Array adapter for the list of web pages
     public static ArrayAdapter<String> WebArrayAdapter;
@@ -1627,6 +1636,7 @@ public class AndPskmail extends AppCompatActivity {
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
         if (resultCode == RESULT_OK && data != null) {
             switch (requestCode) {
                 case CONTACT_PICKER_RESULT:
@@ -1639,7 +1649,7 @@ public class AndPskmail extends AppCompatActivity {
 
                         // query for everything email
                         cursor = getContentResolver().query(Email.CONTENT_URI,
-                                null, Email.CONTACT_ID + "=?", new String[] { id },
+                                null, Email.CONTACT_ID + "=?", new String[]{id},
                                 null);
 
                         int emailIdx = cursor.getColumnIndex(Email.DATA);
@@ -1650,7 +1660,7 @@ public class AndPskmail extends AppCompatActivity {
                         }
                     } catch (Exception ex) {
                         loggingclass.writelog("Failed to get email address. Most likely the permission to read contacts was denied. \n\n" +
-                                        "Consider allowing the app to read your contacts.\n\n" ,
+                                        "Consider allowing the app to read your contacts.\n\n",
                                 null, true);
                     } finally {
                         if (cursor != null) {

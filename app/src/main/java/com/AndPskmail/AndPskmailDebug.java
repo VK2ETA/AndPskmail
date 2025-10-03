@@ -21,14 +21,13 @@ forceCloseDialogAfterToast = true, // optional, default false
 resToastText = R.string.crash_toast_text)
 
 
-    public class AndPskmailDebug extends Application {
-    
+public class AndPskmailDebug extends Application {
 
-	@Override
+
+    @Override
     public void onCreate() {
         // Initialization of ACRA error reporting
         super.onCreate();
-		ACRA.init(this);
+        ACRA.init(this);
     }
-
 }
