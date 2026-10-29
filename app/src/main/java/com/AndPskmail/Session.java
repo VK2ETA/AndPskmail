@@ -49,7 +49,7 @@ public class Session {
 	public boolean CwwwDownload = false;
 	public boolean FileList = false;
 	public String ThisFile = "";
-	public File Trfile = null;
+	public File transacFile = null;
 	public String Transaction = "";
 	public String ThisFileLength = "";
 	public boolean  MsgDownload = false;
@@ -87,8 +87,8 @@ public class Session {
 	public static int DataSize = 0;
 
 	private FileWriter headers = null;
-	public FileWriter dlFile = null;
-	public FileWriter pFile = null;
+	public FileWriter tempFile = null;
+	public FileWriter transacFileWriter = null;
 	private FileWriter tmpmessage = null;
 	private FileWriter inbox = null;
 	private arq a;
@@ -727,7 +727,7 @@ public class Session {
 				try{
 					File tmp = new File(Processor.HomePath + Processor.Dirprefix + "TempFile");
 					tmp.delete();                                              
-					this.dlFile = new FileWriter(new File (Processor.HomePath + Processor.Dirprefix + "TempFile"), true);
+					this.tempFile = new FileWriter(new File (Processor.HomePath + Processor.Dirprefix + "TempFile"), true);
 				}
 				catch (Exception e){
 					loggingclass.writelog("Error when trying to open the download file.", e, true);
@@ -753,7 +753,7 @@ public class Session {
 					File tmp = new File(Processor.HomePath + Processor.Dirprefix + "TempFile");
 					tmp.delete();
 					// open filewriter for TempFile
-					this.dlFile = new FileWriter(new File (Processor.HomePath + Processor.Dirprefix +"TempFile"), true);
+					this.tempFile = new FileWriter(new File (Processor.HomePath + Processor.Dirprefix +"TempFile"), true);
 					// copy pending file into temp
 					File pending = new File (Processor.HomePath + Processor.Dirprefix + "Pending" + Processor.Separator + Transaction);
 
@@ -763,7 +763,7 @@ public class Session {
 						int c;
 						// copy the pending file
 						while ((c = in.read()) != -1)
-							dlFile.write(c);
+							tempFile.write(c);
 						// close pending file
 						in.close();
 					}
@@ -773,9 +773,9 @@ public class Session {
 					loggingclass.writelog("Error when trying to open the download file.", e, true);
 				}
 				try {
-					Trfile = new File(Processor.pendingstr + Transaction);
+					transacFile = new File(Processor.pendingstr + Transaction);
 					// open pending file (now called pFile) for write
-					this.pFile = new FileWriter (Trfile, true);
+					this.transacFileWriter = new FileWriter (transacFile, true);
 				}
 				catch (Exception e){
 					loggingclass.writelog("Error when trying to open the pending file.", e, true);
@@ -796,7 +796,7 @@ public class Session {
 					File tmp = new File(Processor.HomePath + Processor.Dirprefix + "TempFile");
 					tmp.delete();
 					// open filewriter for TempFile
-					this.dlFile = new FileWriter(new File (Processor.HomePath + Processor.Dirprefix +"TempFile"), true);
+					this.tempFile = new FileWriter(new File (Processor.HomePath + Processor.Dirprefix +"TempFile"), true);
 					// copy pending file into temp
 					File pending = new File (Processor.HomePath + Processor.Dirprefix + "Pending" + Processor.Separator + Transaction);
 
@@ -806,7 +806,7 @@ public class Session {
 						int c;
 						// copy the pending file
 						while ((c = in.read()) != -1)
-							dlFile.write(c);
+							tempFile.write(c);
 						// close pending file
 						in.close();
 					}
@@ -816,14 +816,14 @@ public class Session {
 					loggingclass.writelog("Error when trying to open the download file.", e, true);
 				}
 				try {
-					Trfile = new File(Processor.pendingstr + Transaction);
+					transacFile = new File(Processor.pendingstr + Transaction);
 					// open pending file (now called pFile) for write
-					this.pFile = new FileWriter (Trfile, true);
+					this.transacFileWriter = new FileWriter (transacFile, true);
 				}
 				catch (Exception e){
 					loggingclass.writelog("Error when trying to open the pending file.", e, true);
 				}
-				// compressed web page open...
+				// compressed web page or script output, open...
 			} else if (fmm.group(4).equals("w")){
 				CwwwDownload = true;
 				Processor.comp = true;
@@ -839,7 +839,7 @@ public class Session {
 					File tmp = new File(Processor.HomePath + Processor.Dirprefix + "TempFile");
 					tmp.delete();
 					// open filewriter for TempFile
-					this.dlFile = new FileWriter(new File (Processor.HomePath + Processor.Dirprefix +"TempFile"), true);
+					this.tempFile = new FileWriter(new File (Processor.HomePath + Processor.Dirprefix +"TempFile"), true);
 					// open File for pending
 					File pending = new File (Processor.HomePath + Processor.Dirprefix + "Pending" + Processor.Separator + Transaction);
 
@@ -849,21 +849,18 @@ public class Session {
 						int c;
 						// copy the pending file
 						while ((c = in.read()) != -1)
-							dlFile.write(c);
+							tempFile.write(c);
 						// close pending file
 						in.close();
-						//                                                    pending.delete();
 					}
 
-				}
-				catch (Exception e){
+				} catch (Exception e){
 					loggingclass.writelog("Error when trying to open the download file.", e, true);
 				}
 				try {
-					Trfile = new File(Processor.pendingstr + Transaction);
-					this.pFile = new FileWriter (Trfile, true);
-				}
-				catch (Exception e){
+					transacFile = new File(Processor.pendingstr + Transaction);
+					this.transacFileWriter = new FileWriter (transacFile, true);
+				} catch (Exception e){
 					loggingclass.writelog("Error when trying to open the pending file.", e, true);
 				}
 
@@ -908,8 +905,8 @@ public class Session {
 
 
 				try {
-					Trfile = new File(Processor.pendingstr + Transaction);
-					pFile = new FileWriter (Trfile, true);
+					transacFile = new File(Processor.pendingstr + Transaction);
+					transacFileWriter = new FileWriter (transacFile, true);
 				}
 				catch (Exception e){
 					loggingclass.writelog("Error when trying to open the pending file.", e, true);
@@ -1284,11 +1281,11 @@ public class Session {
 		Matcher me = pe.matcher(str);
 		if (me.lookingAt()) {
 			if (me.group(1).equals("-end-")){
+
 				if (Headers) {
 					Headers = false;
 					DataReceived = 0;
 					Processor.DataSize = Integer.toString(0);
-
 					try {
 						this.headers.close();
 					} catch (IOException ex) {
@@ -1303,28 +1300,20 @@ public class Session {
 				if (FileDownload){
 					FileDownload = false;
 					Processor.comp = false;
-
 					try {
-						this.dlFile.close();
+						this.tempFile.close();
 					} catch (IOException ex) {
 						loggingclass.writelog("Error when trying to close the download file.", ex, true);
 					}
-
 					try {
 						Base64.decodeFileToFile(Processor.HomePath + Processor.Dirprefix + "TempFile", Processor.HomePath + Processor.Dirprefix + "Downloads" + Processor.Separator + ThisFile);
-
 						Unzip.Unzip(Processor.HomePath + Processor.Dirprefix + "Downloads" + Processor.Separator + ThisFile);
-
 						File tmp = new File (Processor.HomePath + Processor.Dirprefix + "Pending" + Processor.Separator + Transaction);
 						if (tmp.exists()){
 							tmp.delete();
 						}
-
 						Processor.TX_Text += "~FA:" + Transaction + "\n";
-
-
 						Processor.Progress = 0;
-
 					}
 					catch (Exception exc){
 						loggingclass.writelog("Error when trying to decode the downoad file.", exc, true);
@@ -1336,9 +1325,9 @@ public class Session {
 					boolean success = tmp.delete();
 
 					try {
-						if (pFile != null) {
-							Processor.sm.pFile.close();
-							Processor.sm.Trfile.delete();
+						if (transacFileWriter != null) {
+							Processor.sm.transacFileWriter.close();
+							Processor.sm.transacFile.delete();
 						}
 					} catch (IOException ex) {
 						loggingclass.writelog("Error when trying to close the pending file.", ex, true);
@@ -1346,8 +1335,8 @@ public class Session {
 					Processor.Progress = 0;
 
 					Processor.log(ThisFile + " received");
-
 				}
+
 				// messages  download      - append tmpmessage to Inbox in mbox format                          
 				if (MsgDownload) {
 					MsgDownload = false;
@@ -1388,18 +1377,15 @@ public class Session {
 										mdate.group(4) + " " + mdate.group(5) + " " +
 										mdate.group(6);
 							}
-
 						} else if (mdate2.lookingAt()){
 							if (mdate2.group(1).equals("Date:")) {
 								Date = mdate2.group(2) + " " + mdate2.group(3) + " " + 
 										mdate2.group(4);
 							}
-
 						} else if  (msub.lookingAt()){
 							if (msub.group(1).equals("Subject:")) {
 								Sub = msub.group(2);
 							}
-
 						} else if  (m64.lookingAt()){
 							if (m64.group(1).equals("content-transfer-encoding: base64")) {
 								// there is an attachment...
@@ -1437,7 +1423,6 @@ public class Session {
 
 															attachmentFilename = "Files/" + attachmentFilename;
 															attachmentFilename = Processor.HomePath + Processor.Dirprefix + attachmentFilename;
-
 														}   
 													}
 													catch (Exception e) {
@@ -1475,7 +1460,6 @@ public class Session {
 											catch (Exception e){
 												a.Message("Problem with decoding", 10);
 											}
-
 										}
 									}
 								}
@@ -1484,9 +1468,7 @@ public class Session {
 								//                                                                debug ("Out=" + s);
 							}
 						}
-
 					} // end while
-
 					fr.close();
 					this.inbox = new FileWriter(Processor.HomePath + Processor.Dirprefix + "Inbox", true);
 					inbox.write("From " + From + " " + Date + "\n");
@@ -1501,7 +1483,6 @@ public class Session {
 					}
 					inbox.flush();
 					inbox.close();
-
 					File fl = new File(Processor.HomePath + Processor.Dirprefix + "tmpmessage");
 					if (fl.exists()) {
 						fl.delete();
@@ -1526,7 +1507,6 @@ public class Session {
 					catch (Exception e) {
 						a.Message ("Decoding error!", 10);
 					}
-
 					// append to Inbox file
 					FileReader fr = new FileReader(Processor.HomePath + Processor.Dirprefix + "tmpmessage");
 					BufferedReader br = new BufferedReader(fr);
@@ -1556,7 +1536,6 @@ public class Session {
 								Logger.getLogger(Modem.class.getName()).log(Level.SEVERE, null, ex);
 							}
 						}
-
 						Processor.PostToTerminal(s + "\n");
 						// compile some patterns and set up the matchers
 						Pattern pfrm = Pattern.compile("^\\s*(From:)\\s(.*)");
@@ -1577,7 +1556,6 @@ public class Session {
 						Matcher mxui = xui.matcher(s);
 						Pattern nmx = Pattern.compile("name=");
 						Matcher mnmx = nmx.matcher(s);
-
 						if (mfrm.lookingAt()) {
 							if (mfrm.group(1).equals("From:")){   
 								From = mfrm.group(2);
@@ -1588,49 +1566,38 @@ public class Session {
 										mdate.group(4) + " " + mdate.group(5) + " " +
 										mdate.group(6);
 							}
-
 						} else if (mdate2.lookingAt()){
 							if (mdate2.group(1).equals("Date:")) {
 								Date = mdate2.group(2) + " " + mdate2.group(3) + " " + 
 										mdate2.group(4);
 							}
-
 						} else if  (msub.lookingAt()){
 							if (msub.group(1).equals("Subject:")) {
 								Sub = msub.group(2);
 							}
-
 						} else if  (m64.lookingAt()){
 							if (m64.group(1).equals("content-transfer-encoding: base64")) {
 								// there is an attachment...
 								base64attachment = true;
 								//                                                                debug ("Attachment");
 								outstr += s + "\n";  // write to Inbox
-
 							}
 						} else if  (cc64.lookingAt()){
 							outstr += s + "\n";  // write to Inbox
-
 						} else if  (mxui.lookingAt()){
 							outstr += s + "\n";  // write to Inbox
-
 						} else if  (mnm.lookingAt()){
 							if (mnm.group(1).equals("filename=")) {
 								// get the file name, remove double quotes if any
 								attachmentFilename = mnm.group(2).replace("\"", "");
-
 								outstr += s + "\n";  // write to Inbox
-
 							}
 						} else if (mnmx.lookingAt()) {
 							outstr += s + "\n";  // write to Inbox
 						} else {
-
-
 							if (base64attachment) {
 								outstr += s + "\n";  // write to Inbox
-
-								if (!s.equals("")) {
+								if (!s.isEmpty()) {
 									if (!s.startsWith("--")){
 										attachment += s + "\n";
 										//     System.out.println(s);
@@ -1652,10 +1619,8 @@ public class Session {
 															if (!myfiles.isDirectory()) {
 																myfiles.mkdir();
 															}
-
 															attachmentFilename = "Files/" + attachmentFilename;
 															attachmentFilename = Processor.HomePath + Processor.Dirprefix + attachmentFilename;
-
 														}   
 													}
 													catch (Exception e) {
@@ -1668,7 +1633,6 @@ public class Session {
 												if (!myfiles.isDirectory()) {
 													myfiles.mkdir();
 												}
-
 												attachmentFilename = "Files/" + attachmentFilename;
 												attachmentFilename = Processor.HomePath + Processor.Dirprefix + attachmentFilename;
 											}
@@ -1686,16 +1650,13 @@ public class Session {
 													}
 												}
 												//loggingclass.writelog("Compressed: >"+attachmentFilename+"< length() = " + Integer.toString(attachmentFilename.length()), null, true);
-
 												boolean success = Base64.decodeToFile(attachment, attachmentFilename);
 												a.Message ("File stored in " + attachmentFilename, 10);
 												Processor.PostToTerminal("\n File stored in " + attachmentFilename + "\n");
-
 											}
 											catch (Exception e){
 												a.Message("Problem with decoding, "+ e, 10);
 											}
-
 										}
 									}
 								}
@@ -1703,9 +1664,7 @@ public class Session {
 								outstr += s + "\n";  // write to Inbox
 							}
 						}
-
 					} // end while
-
 					fr.close();
 					this.inbox = new FileWriter(Processor.HomePath + Processor.Dirprefix + "Inbox", true);
 					inbox.write("From " + From + " " + Date + "\n");
@@ -1720,39 +1679,31 @@ public class Session {
 					}
 					inbox.flush();
 					inbox.close();
-
 					File fl = new File(Processor.HomePath + Processor.Dirprefix + "tmpmessage");
 					if (fl.exists()) {
 						fl.delete();
 					}
-
-
-
 					File pending = new File (Processor.HomePath + Processor.Dirprefix + "Pending" + Processor.Separator + Transaction);
 					if (pending.exists()) {
 						pending.delete();
 					}
-
 					if (Processor.protocol > 0) {
 						Processor.TX_Text += "~FA:" + Transaction + "\n";
 					}
 					Processor.Progress = 0;
-
 					a.Message("Added to mbox queue", 10);
 				}
-				// compressed web pages download
+
+				// compressed web pages and script output download
 				if (CwwwDownload) {
 					CwwwDownload = false;
 					Processor.comp = false;
-
 					try {
-						this.dlFile.close();
+						this.tempFile.close();
 					} catch (IOException ex) {
 						loggingclass.writelog("Error when trying to close the download file.", ex, true);
 					}
-
-
-
+					//Decode Base64 to .bz to text
 					try {
 						try {
 							Base64.decodeFileToFile(Processor.HomePath + Processor.Dirprefix + "TempFile", Processor.HomePath + Processor.Dirprefix + "TMP.gz");
@@ -1766,33 +1717,33 @@ public class Session {
 						catch (Exception exz) {
 							loggingclass.writelog("Error when trying to unzip the download file.", exz, true);
 						}
-
+						//Output the file to the terminal
 						try {
 							BufferedReader in = new BufferedReader(new FileReader(Processor.HomePath + Processor.Dirprefix + "TMP"));
 							String str2;
+							StringBuilder sb = new StringBuilder();
 							while ((str2 = in.readLine()) != null) {
-								Processor.PostToTerminal(str2 + "\n");
+								sb.append(str2).append("\n");
 							}
 							in.close();
+							Processor.PostToTerminal(sb.append("\n").toString());
 						} catch (IOException e) {
 							a.Message("problem decoding B64 file", 10);
 						}
 						File tmp1 = new File (Processor.HomePath + Processor.Dirprefix + "TMP");
-
+						//Cleanup
 						if (tmp1.exists()){
 							tmp1.delete();
 						}
-
 						File tmp = new File (Processor.HomePath + Processor.Dirprefix + "Pending" + Processor.Separator + Transaction);
 						if (tmp.exists()){
 							tmp.delete();
 						}
+						//Let the other side we received the compressed data
 						if (Processor.protocol > 0){
 							Processor.TX_Text += "~FA:" + Transaction + "\n";
-
 						}
 						Processor.Progress = 0;
-
 					}
 					catch (Exception exc){
 						loggingclass.writelog("Error handling the download file.", exc, true);
@@ -1802,17 +1753,15 @@ public class Session {
 					}
 					File tmp = new File(Processor.HomePath + Processor.Dirprefix + "TempFile");
 					boolean success = tmp.delete();
-
 					try {
-						if (pFile != null) {
-							Processor.sm.pFile.close();
-							Processor.sm.Trfile.delete();
+						if (transacFileWriter != null) {
+							Processor.sm.transacFileWriter.close();
+							Processor.sm.transacFile.delete();
 						}
 					} catch (IOException ex) {
 						loggingclass.writelog("Error when trying to close the pending file.", ex, true);
 					}
 					Processor.Progress = 0;
-
 				}
 
 				// web pages   download                                      
@@ -1897,15 +1846,15 @@ public class Session {
 			}
 
 			try {
-				if (pFile != null) {
-					pFile.write(str + "\n");
-					pFile.flush();
+				if (transacFileWriter != null) {
+					transacFileWriter.write(str + "\n");
+					transacFileWriter.flush();
 				}
 			} catch (IOException ex) {
 				//                                                Main.log.writelog("Error when trying to write to pending file.", ex, true);
 			}
 			try {
-				this.dlFile.write(str + "\n");                                                 
+				this.tempFile.write(str + "\n");
 			} catch (IOException ex) {
 				//                                                Main.log.writelog("Error when trying to write to download file.", ex, true);
 			}
@@ -1923,9 +1872,9 @@ public class Session {
 			Processor.Progress = 100 * DataReceived / DataSize ;
 
 			try {
-				if (pFile != null) {
-					pFile.write(str + "\n");
-					pFile.flush();
+				if (transacFileWriter != null) {
+					transacFileWriter.write(str + "\n");
+					transacFileWriter.flush();
 				}
 			} catch (IOException ex) {
 				//                                             Main.log.writelog("Error when trying to write to pending file.", ex, true);
@@ -1938,22 +1887,24 @@ public class Session {
 				loggingclass.writelog("Error when trying to write to tmpmessage file.", ex, true);
 			}
 		}
-		// compressed www pages
+		//Compressed www pages or compressed script output
 		if (CwwwDownload & !Firstline) {
 			DataReceived += str.length();
-			Processor.Progress = 100 * DataReceived / DataSize ;
-			try {
-				if (pFile != null & str.length() > 0) {
-					pFile.write(str + "\n");
-					pFile.flush();
-				}
-			} catch (IOException ex) {
-				//                                               Main.log.writelog("Error when trying to write to pending file.", ex, true);
+			if (DataSize > 0) {
+				Processor.Progress = 100 * DataReceived / DataSize;
 			}
 			try {
-				if (str.length() > 0){
-					dlFile.write(str + "\n");
-					dlFile.flush();
+				if (transacFileWriter != null & !str.isEmpty()) {
+					transacFileWriter.write(str + "\n");
+					transacFileWriter.flush();
+				}
+			} catch (IOException ex) {
+				loggingclass.writelog("Error when trying to write to pending file.", ex, true);
+			}
+			try {
+				if (!str.isEmpty()){
+					tempFile.write(str + "\n");
+					tempFile.flush();
 				}
 			} catch (IOException ex) {
 				loggingclass.writelog("Error when trying to write to tmpmessage file.", ex, true);
@@ -1971,7 +1922,7 @@ public class Session {
 		// iac fleetcode file     
 		//                                    debug (Integer.toString(str.length()));
 
-		if (!Processor.Connected & Processor.IACmode & str.length() > 0) {
+		if (!Processor.Connected & Processor.IACmode & !str.isEmpty()) {
 			try {
 				iacout.write(str + "\n");
 				iacout.flush();
@@ -2332,7 +2283,7 @@ public class Session {
 	}
 
 	//Resets all receiving transactions (we received and -abort- OR we issued a STOP command as a client)
-	private void abortAllRxTransactions() {
+	public void abortAllRxTransactions() {
 		if (Headers) {
 			Headers = false;
 			DataReceived = 0;
@@ -2354,18 +2305,15 @@ public class Session {
 		if (FileDownload){
 			FileDownload = false;
 			Processor.comp = false;
-
 			try {
-				this.dlFile.close();
+				this.tempFile.close();
 				File df = new File(Processor.HomePath + Processor.Dirprefix + "TempFile");
 				if (df.exists()) {
 					boolean scs = df.delete();
 				}
-
 			} catch (IOException ex) {
 				loggingclass.writelog("Error when trying to close the download file.", ex, true);
 			}
-
 			try {
 				File tmp = new File (Processor.HomePath + Processor.Dirprefix + "Pending" + Processor.Separator + Transaction);
 				if (tmp.exists()){
@@ -2375,29 +2323,23 @@ public class Session {
 				Processor.TX_Text += "~FA:" + Transaction + "\n";
 
 				Processor.Progress = 0;
-
-			}
-			catch (Exception exc){
-				loggingclass.writelog("Error when trying to decode the downoad file.", exc, true);
-			}
-			catch (NoClassDefFoundError exp) {
+			} catch (Exception exc){
+				loggingclass.writelog("Error when trying to decode the download file.", exc, true);
+			} catch (NoClassDefFoundError exp) {
 				a.Message("problem decoding B64 file", 10);
 			}
 			File tmp = new File(Processor.HomePath + Processor.Dirprefix + "TempFile");
 			boolean success = tmp.delete();
-
 			try {
-				if (pFile != null) {
-					Processor.sm.pFile.close();
-					Processor.sm.Trfile.delete();
+				if (transacFileWriter != null) {
+					Processor.sm.transacFileWriter.close();
+					Processor.sm.transacFile.delete();
 				}
 			} catch (IOException ex) {
 				loggingclass.writelog("Error when trying to close the pending file.", ex, true);
 			}
 			Processor.Progress = 0;
-
 			//                                                    Main.log(ThisFile + " received");
-
 		}
 		// messages  download      - append tmpmessage to Inbox in mbox format
 		if (MsgDownload) {
@@ -2439,22 +2381,17 @@ public class Session {
 		if (CwwwDownload) {
 			CwwwDownload = false;
 			Processor.comp = false;
-
 			try {
-				this.dlFile.close();
+				this.tempFile.close();
 			} catch (IOException ex) {
 				loggingclass.writelog("Error when trying to close the download file.", ex, true);
 			}
-
-
-
 			File tmp = new File(Processor.HomePath + Processor.Dirprefix + "TempFile");
 			boolean success = tmp.delete();
-
 			try {
-				if (pFile != null) {
-					Processor.sm.pFile.close();
-					Processor.sm.Trfile.delete();
+				if (transacFileWriter != null) {
+					Processor.sm.transacFileWriter.close();
+					Processor.sm.transacFile.delete();
 				}
 			} catch (IOException ex) {
 				loggingclass.writelog("Error when trying to close the pending file.", ex, true);

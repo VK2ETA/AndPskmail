@@ -129,7 +129,7 @@ import android.view.animation.*;
 
 //USB interface management
 import java.util.List;
-import android.app.PendingIntent;
+
 import android.hardware.usb.UsbDeviceConnection;
 import android.hardware.usb.UsbManager;
 
@@ -4663,7 +4663,6 @@ public class AndPskmail extends AppCompatActivity {
 
             if (Processor.Connected) {
                 try {
-
                     Processor.q.send_abort();
                 } catch (InterruptedException ex) {
                     // JD Fix logging
@@ -4671,20 +4670,22 @@ public class AndPskmail extends AppCompatActivity {
                     // null, ex);
                 }
                 try {
-                    if (Processor.sm.pFile != null) {
-                        Processor.sm.pFile.close();
+                    if (Processor.sm.transacFileWriter != null) {
+                        Processor.sm.transacFileWriter.close();
                     }
                 } catch (IOException e) {
                     Processor.q.Message("Cannot close pending file", 10);
                 }
                 try {
-                    if (Processor.sm.dlFile != null) {
-                        Processor.sm.dlFile.close();
+                    if (Processor.sm.tempFile != null) {
+                        Processor.sm.tempFile.close();
+                        //Delete the tempFile, the already received data is in the transaction file
+                        File tmp = new File(Processor.HomePath + Processor.Dirprefix + "TempFile");
+                        tmp.delete();
                     }
                 } catch (IOException e) {
                     Processor.q.Message("Cannot close pending file", 10);
                 }
-
             } else if (Processor.TTYConnected.equals("Connected")) {
                 try {
                     Processor.q.send_abort();

@@ -34,8 +34,8 @@ import android.os.IBinder;
 
 public class Processor extends Service {
 
-	static String application ="AndPskmail 1.4.1.4"; // Used to preset an empty status
-	static String version = "Version 1.4.1.4, 2025-10-02";
+	static String application ="AndPskmail 1.4.1.5"; // Used to preset an empty status
+	static String version = "Version 1.4.1.5, 2026-10-24";
 	//public static int RxFrequencyOffset = 0;
 	//public static boolean showallcharacters = false; //debugging
 	public static boolean justReceivedRSID = false;
@@ -439,8 +439,8 @@ static String[] AltModes = {"       ","THOR8","MFSK16","THOR22",
 						Totalbytes = 0;
 						sm.FileDownload = false;
 						try {
-							if (sm.pFile != null) {
-								sm.pFile.close();
+							if (sm.transacFileWriter != null) {
+								sm.transacFileWriter.close();
 							}
 						}
 						catch (IOException e) {
