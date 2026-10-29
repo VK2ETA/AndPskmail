@@ -138,6 +138,7 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.TaskStackBuilder;
 import androidx.core.content.ContextCompat;
+import androidx.core.view.WindowCompat;
 
 import com.hoho.android.usbserial.driver.UsbSerialDriver;
 import com.hoho.android.usbserial.driver.UsbSerialPort;
@@ -680,7 +681,7 @@ public class AndPskmail extends AppCompatActivity {
                         AndPskmail.mAudioManager.stopBluetoothSco();
                         if (AndPskmail.mBluetoothAdapter != null) {
                             if (AndPskmail.mBluetoothAdapter.isEnabled()) {
-                                AndPskmail.mBluetoothAdapter.disable();
+                                try { AndPskmail.mBluetoothAdapter.disable(); } catch (SecurityException ignored) {}
                             }
                         }
                     }
@@ -943,12 +944,18 @@ public class AndPskmail extends AppCompatActivity {
 
     private boolean allPermissionsOk() {
         final int granted = PackageManager.PERMISSION_GRANTED;
+        boolean allOK = true;
 
         //ContextCompat.checkSelfPermission(myContext, Manifest.permission.READ_CONTACTS) == granted &&
-        return        ContextCompat.checkSelfPermission(myContext, Manifest.permission.ACCESS_FINE_LOCATION) == granted &&
-                ContextCompat.checkSelfPermission(myContext, Manifest.permission.WRITE_EXTERNAL_STORAGE) == granted &&
-                ContextCompat.checkSelfPermission(myContext, Manifest.permission.RECORD_AUDIO) == granted &&
-                ContextCompat.checkSelfPermission(myContext, Manifest.permission.READ_PHONE_STATE) == granted;
+        if (ContextCompat.checkSelfPermission(myContext, Manifest.permission.ACCESS_FINE_LOCATION) != granted)
+            allOK = false;
+        //if (ContextCompat.checkSelfPermission(myContext, Manifest.permission.WRITE_EXTERNAL_STORAGE) != granted)
+        //    allOK = false;
+        if (ContextCompat.checkSelfPermission(myContext, Manifest.permission.RECORD_AUDIO) != granted)
+            allOK = false;
+        if (ContextCompat.checkSelfPermission(myContext, Manifest.permission.READ_PHONE_STATE) != granted)
+            allOK = false;
+        return allOK;
     }
 
 
@@ -962,8 +969,6 @@ public class AndPskmail extends AppCompatActivity {
                 readContactsPermit = grantResults[i] == granted;
             } else if (permissions[i].equals(Manifest.permission.ACCESS_FINE_LOCATION)) {
                 fineLocationPermit = grantResults[i] == granted;
-            } else if (permissions[i].equals(Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
-                writeExtStoragePermit = grantResults[i] == granted;
             } else if (permissions[i].equals(Manifest.permission.RECORD_AUDIO)) {
                 recordAudioPermit = grantResults[i] == granted;
             } else if (permissions[i].equals(Manifest.permission.READ_PHONE_STATE)) {
@@ -1004,22 +1009,6 @@ public class AndPskmail extends AppCompatActivity {
                 return;
             }
         }
-
-
-        //Debug only: Menu hack to force showing the overflow button (aka menu button) on the
-        //   action bar EVEN IF there is a hardware button
-        try {
-            ViewConfiguration config = ViewConfiguration.get(this);
-            Field menuKeyField = ViewConfiguration.class.getDeclaredField("sHasPermanentMenuKey");
-
-            if (menuKeyField != null) {
-                menuKeyField.setAccessible(true);
-                menuKeyField.setBoolean(config, false);
-            }
-        } catch (Exception e) {
-            // presumably, not relevant
-        }
-
 
         //Get a static copy of the base myContext
         myContext = this.getBaseContext();
@@ -1099,7 +1088,7 @@ public class AndPskmail extends AppCompatActivity {
                 if (action == BluetoothDevice.ACTION_ACL_DISCONNECTED) {
                     BluetoothDevice device = intent
                             .getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
-                    String deviceName = device.getName();
+                    String deviceName; try { deviceName = device.getName(); } catch (SecurityException ignored) { deviceName = null; }
                     String wantedDevice = myconfig.getPreference("BLUETOOTHDEVICENAME", "noname");
                     if (deviceName != null
                             && toBluetooth
@@ -1115,7 +1104,7 @@ public class AndPskmail extends AppCompatActivity {
                 } else if (action == BluetoothDevice.ACTION_ACL_CONNECTED) {
                     BluetoothDevice device = intent
                             .getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
-                    String deviceName = device.getName();
+                    String deviceName; try { deviceName = device.getName(); } catch (SecurityException ignored) { deviceName = null; }
                     String wantedDevice = myconfig.getPreference("BLUETOOTHDEVICENAME", "noname");
                     //Android 10 bug?? deviceName is sometimes null
                     if (deviceName != null && deviceName.equals(wantedDevice)
@@ -1198,7 +1187,7 @@ public class AndPskmail extends AppCompatActivity {
         // test filter.addAction(AudioManager.ACTION_SCO_AUDIO_STATE_CHANGED);
         //}
         // Not called filter.addAction(DownloadManager.ACTION_DOWNLOAD_COMPLETE);
-        this.registerReceiver(mReceiver, filter);
+        ContextCompat.registerReceiver(this, mReceiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED);
 
         // Register for phone state monitoring
         tmgr = (TelephonyManager)
@@ -1485,7 +1474,7 @@ public class AndPskmail extends AppCompatActivity {
                 TaskStackBuilder nstackBuilder = TaskStackBuilder.create(myContext);
                 nstackBuilder.addParentStack(AndPskmail.class);
                 nstackBuilder.addNextIntent(notificationIntent);
-                PendingIntent pIntent = nstackBuilder.getPendingIntent(0, PendingIntent.FLAG_UPDATE_CURRENT);
+                PendingIntent pIntent = nstackBuilder.getPendingIntent(0, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
                 mBuilder.setContentIntent(pIntent);
                 // VK2ETA notification is done in Processor service now
                 myNotification = mBuilder.build();
@@ -1572,7 +1561,7 @@ public class AndPskmail extends AppCompatActivity {
             if (connection == null && usbPermission == UsbPermission.Unknown && !manager.hasPermission(driver.getDevice())) {
                 //middleToastText("Intent to Request Permission");
                 usbPermission = UsbPermission.Requested;
-                PendingIntent usbPermissionIntent = PendingIntent.getBroadcast(myContext, 0, new Intent(INTENT_ACTION_GRANT_USB), 0);
+                PendingIntent usbPermissionIntent = PendingIntent.getBroadcast(myContext, 0, new Intent(INTENT_ACTION_GRANT_USB), PendingIntent.FLAG_IMMUTABLE);
                 manager.requestPermission(driver.getDevice(), usbPermissionIntent);
                 return;
             }
@@ -2061,9 +2050,9 @@ public class AndPskmail extends AppCompatActivity {
     // Simple text transparent popups (bottom of screen)
     public static void topToastText(String message) {
         try {
-            if (Build.VERSION.SDK_INT >= 28 && myToast.getView().isShown()) {
-                myToast.cancel();
-            }
+            //if (Build.VERSION.SDK_INT >= 28 && myToast.getView().isShown()) {
+            //    myToast.cancel();
+            //}
             myToast.setText(message);
             myToast.setGravity(Gravity.TOP, 0	, 100);
             myToast.show();
@@ -2079,9 +2068,9 @@ public class AndPskmail extends AppCompatActivity {
     // Simple text transparent popups TOWARDS MIDDLE OF SCREEN
     public static void middleToastText(String message) {
         try {
-            if (Build.VERSION.SDK_INT >= 28 && myToast.getView().isShown()) {
-                myToast.cancel();
-            }
+            //if (Build.VERSION.SDK_INT >= 28 && myToast.getView().isShown()) {
+            //    myToast.cancel();
+            //}
             myToast.setText(message);
             myToast.setGravity(Gravity.CENTER, 0	, 0);
             myToast.show();
@@ -2096,9 +2085,9 @@ public class AndPskmail extends AppCompatActivity {
     // Simple text transparent popups
     public static void bottomToastText(String message) {
         try {
-            if (Build.VERSION.SDK_INT >= 28 && myToast.getView().isShown()) {
-                myToast.cancel();
-            }
+            //if (Build.VERSION.SDK_INT >= 28 && myToast.getView().isShown()) {
+            //    myToast.cancel();
+            //}
             myToast.setText(message);
             myToast.setGravity(Gravity.BOTTOM, 0, 100);
             myToast.show();
@@ -4258,10 +4247,30 @@ public class AndPskmail extends AppCompatActivity {
     private void displayAbout() {
         currentview = ABOUTVIEW;
 
+        String versionName;
+        try {
+            versionName = getPackageManager()
+                    .getPackageInfo(getPackageName(), 0).versionName;
+        } catch (PackageManager.NameNotFoundException e) {
+            versionName = "Unknown";
+        }
+
+        String buildDate;
+        try {
+            String apkPath = getApplicationInfo().sourceDir;
+            long apkModified = new java.io.File(apkPath).lastModified();
+            buildDate = new java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
+                    .format(new java.util.Date(apkModified));
+        } catch (Exception e) {
+            buildDate = "Unknown";
+        }
+
+
         // Open APRS layout by default until we have other activities defined
         setContentView(R.layout.about);
         TextView myversion = (TextView) findViewById(R.id.versiontextview);
-        myversion.setText("          " + Processor.version);
+        String versionAndDate = "          Version " + versionName + "-" + buildDate;
+        myversion.setText(versionAndDate);
 
         // JD Initialize the return to terminal button
         myButton = (Button) findViewById(R.id.button_returntoterminal);

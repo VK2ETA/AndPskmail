@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    android:versionCode="1"
-    android:versionName="1.2.8">
+    android:versionCode="2"
+    android:versionName="2.0.0.0">
 
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
@@ -30,9 +30,11 @@
         android:name="AndPskmailDebug"
         android:icon="@drawable/icon"
         android:label="@string/app_name"
-        android:theme="@style/Theme.AppCompat">
+        android:theme="@style/AppTheme" >
+        <!-- android:theme="@style/Theme.AppCompat" >  -->
         <activity
             android:name=".AndPskmail"
+            android:exported="true"
             android:configChanges="keyboardHidden|orientation|screenLayout|screenSize"
             android:label="@string/app_name"
             android:launchMode="singleTop"
@@ -50,7 +52,7 @@
                 android:name="android.hardware.usb.action.USB_DEVICE_ATTACHED"
                 android:resource="@xml/device_filter" />
         </activity>
-        <activity android:name="myPreferences"></activity>
+        <activity android:name="myPreferences" android:exported="false"></activity>
         <service
             android:name=".Processor"
             android:foregroundServiceType="microphone" />
