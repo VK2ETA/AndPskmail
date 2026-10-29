@@ -18,10 +18,6 @@ import android.app.AlertDialog;
 import android.content.DialogInterface;
 import android.content.SharedPreferences;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
@@ -652,20 +648,16 @@ public class config {
 
     //Backup all preferences to file
     public static boolean saveSharedPreferencesToFile(String fileName) {
-
         String fullFileName = Processor.HomePath + Processor.Dirprefix + fileName;
-        File dst = new File(fullFileName);
         boolean res = false;
         ObjectOutputStream output = null;
         try {
-            output = new ObjectOutputStream(new FileOutputStream(dst));
+            output = new ObjectOutputStream(AppStorage.openOutputStream(fullFileName, false));
             output.writeObject(AndPskmail.mysp.getAll());
             res = true;
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
         } catch (IOException e) {
             e.printStackTrace();
-        }finally {
+        } finally {
             try {
                 if (output != null) {
                     output.flush();
@@ -682,8 +674,7 @@ public class config {
 
     //Read backup preference file and restore values
     public static void loadSharedPreferencesFromFile(String fileName) {
-        String fullFileName = Processor.HomePath + Processor.Dirprefix + fileName;
-        final File src = new File(fullFileName);
+        final String fullFileName = Processor.HomePath + Processor.Dirprefix + fileName;
 
 
         AlertDialog.Builder myAlertDialog = new AlertDialog.Builder(
@@ -697,7 +688,7 @@ public class config {
                         SharedPreferences.Editor editor = AndPskmail.mysp.edit();
                         try {
                             editor.clear();
-                            input = new ObjectInputStream(new FileInputStream(src));
+                            input = new ObjectInputStream(AppStorage.openInputStream(fullFileName));
                             Map<String, ?> entries = (Map<String, ?>) input.readObject();
                             for (Map.Entry<String, ?> entry : entries.entrySet()) {
                                 Object v = entry.getValue();
@@ -714,11 +705,12 @@ public class config {
                                     editor.putString(key, ((String) v));
                             }
                             editor.commit();
-                        } catch (FileNotFoundException e) {
-                            //e.printStackTrace();
-                            AndPskmail.myInstance.topToastText("No backup file found.\n\n Use \"Save Preferences\" option first");
                         } catch (IOException e) {
-                            e.printStackTrace();
+                            if (!AppStorage.exists(fullFileName)) {
+                                AndPskmail.myInstance.topToastText("No backup file found.\n\n Use \"Save Preferences\" option first");
+                            } else {
+                                e.printStackTrace();
+                            }
                         } catch (ClassNotFoundException e) {
                             e.printStackTrace();
                         }finally {

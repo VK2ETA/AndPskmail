@@ -24,6 +24,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.net.*;
 import java.io.*;
+import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
 import java.util.Random;
 import android.app.NotificationManager;
 import android.app.Service;
@@ -208,8 +210,8 @@ static String[] AltModes = {"       ","THOR8","MFSK16","THOR22",
 	// Modem handle
 	static public Modem m;
 
-	// File handles
-	static FileWriter bulletin = null;
+	// File handles — bulletin is now an OutputStreamWriter backed by SAF
+	static OutputStreamWriter bulletin = null;
 	static FileReader hdr = null;
 	// DCD
 	static String DCDstr;
@@ -1006,99 +1008,57 @@ static String[] AltModes = {"       ","THOR8","MFSK16","THOR22",
 	/**
 	 * Create or check the necessary folder structure (.pskmail)
 	 */
-	private static void handlefolderstructure(){
-
-		// are we on Linux?
+	private static void handlefolderstructure() {
 		try {
-			//VK2ETA Changed to SD card device           HomePath = System.getProperty("user.home");
-			//VK2ETA FIX: add exception here when there is no external storage
-			HomePath = Environment.getExternalStorageDirectory().getAbsolutePath();
-			if (File.separator.equals("/")) {
-				Dirprefix = "/pskmail/";
-				onWindows = false;
-			} else  {
-				Dirprefix = "\\pskmail\\";
-				onWindows = true;
+			// Resolve HomePath from the SAF URI that the user selected.
+			// resolveAbsoluteParentPath() returns the real filesystem path of
+			// the parent folder the user picked (e.g. /sdcard/Documents).
+			// APP_SUBFOLDER ("pskmail") is appended to form the working root.
+			String parentPath = AppStorage.resolveAbsoluteParentPath();
+			if (parentPath.isEmpty()) {
+				loggingclass.writelog("SAF root not set — cannot resolve HomePath.", null, true);
+				return;
 			}
 
+			HomePath  = parentPath;
+			Dirprefix = "/" + AppStorage.APP_SUBFOLDER + "/";
+			Separator = "/";
+			onWindows = false;
 
-			//Check if pskmail directory exists, create if not
-			File dir = new File(HomePath + Dirprefix);
-			if (!dir.isDirectory()) {
-				dir.mkdir();
-			}
-			//Check if Outbox directory exists, create if not
-			if (File.separator.equals("/")) {
-				Separator = "/";
-			} else {
-				Separator = "\\";
-			}
-			File outbox = new File(HomePath + Dirprefix + "Outbox" + Separator);
-			if (!outbox.isDirectory()) {
-				outbox.mkdir();
-			}
-			File pendingfl = new File(HomePath + Dirprefix + "Pending" + Separator);
+			// Ensure the pskmail sub-folder tree exists via SAF.
+			AppStorage.mkdirs(HomePath + Dirprefix);
+			AppStorage.mkdirs(HomePath + Dirprefix + "Outbox/");
+			AppStorage.mkdirs(HomePath + Dirprefix + "Pending/");
+			AppStorage.mkdirs(HomePath + Dirprefix + "Outpending/");
+			AppStorage.mkdirs(HomePath + Dirprefix + "Downloads/");
 
-			if (!pendingfl.isDirectory()) {
-				pendingfl.mkdir();
-			}
-			File outpendingfl = new File(HomePath + Dirprefix + "Outpending" + Separator);
+			pendingstr    = HomePath + Dirprefix + "Pending/";
+			pending       = new File(pendingstr);   // kept for length() calls in Session
+			Pendingdir    = pendingstr;
+			Outpendingdir = HomePath + Dirprefix + "Outpending/";
+			Transactions  = HomePath + Dirprefix + "Transactions";
 
-			if (!outpendingfl.isDirectory()) {
-				outpendingfl.mkdir();
+			// Ensure the bulletins file exists.
+			String bulletinsPath = HomePath + Dirprefix + "Downloads/bulletins";
+			if (!AppStorage.exists(bulletinsPath)) {
+				AppStorage.createNewFile(bulletinsPath);
 			}
+			bulletin = new OutputStreamWriter(
+					AppStorage.openOutputStream(bulletinsPath, true));
 
-			//Check if Downloads directory exists, create if not
-			if (File.separator.equals("/")) {
-				Separator = "/";
-			} else {
-				Separator = "\\";
+			// Ensure the headers file exists, then read its contents.
+			String headersPath = HomePath + Dirprefix + "headers";
+			if (!AppStorage.exists(headersPath)) {
+				AppStorage.createNewFile(headersPath);
 			}
-			File downloads = new File(HomePath + Dirprefix + "Downloads" + Separator);
-			if (!downloads.isDirectory()) {
-				downloads.mkdir();
-			}
-
-
-			//Check if Pending directory exists, create if not
-			if (File.separator.equals("/")) {
-				Separator = "/";
-			} else {
-				Separator = "\\";
-			}
-			pendingstr =   HomePath + Dirprefix + "Pending" + Separator;
-			pending = new File(pendingstr);
-			if (!pending.isDirectory()) {
-				pending.mkdir();
-			}
-			Pendingdir = HomePath + Dirprefix + "Pending" + Separator;
-			Outpendingdir = HomePath + Dirprefix + "Outpending" + Separator;
-			Transactions = HomePath + Dirprefix + "Transactions";
-
-			// Check if bulletin file  exists, create if not
-			File fFile = new File(Processor.HomePath + Processor.Dirprefix + "Downloads" + Separator + "bulletins");
-			if (!fFile.exists()) {
-				fFile.createNewFile();
-			}
-
-			bulletin = new FileWriter(fFile, true);
-
-			// check if headers file exists, and read in contents 
-			File fh = new File(HomePath + Dirprefix + "headers");
-			if (!fh.exists()) {
-				fh.createNewFile();
-			}
-
-			hdr = new FileReader(fh);
-			BufferedReader br = new BufferedReader(hdr);
+			BufferedReader br = new BufferedReader(
+					new InputStreamReader(AppStorage.openInputStream(headersPath)));
 			String s;
 			while ((s = br.readLine()) != null) {
-				String fl = s + "\n";
-				Mailheaderswindow += fl;
+				Mailheaderswindow += s + "\n";
 			}
-			br.close();               
-		}
-		catch(Exception ex){
+			br.close();
+		} catch (Exception ex) {
 			loggingclass.writelog("Problem when handling pskmail folder structure.", ex, true);
 		}
 	}
@@ -1394,28 +1354,21 @@ static  public void parsenmeadata(String nmeadata){
 	static void savePreferences()  {
 		try {
 			// store the config file if present
-
-			File f1 = new File( "configuration.xml");
-			File f2 = new File(Processor.HomePath + Processor.Dirprefix + "configuration.xml");
-
+			File f1 = new File("configuration.xml");
 			if (f1.isFile()) {
-
+				String destPath = Processor.HomePath + Processor.Dirprefix + "configuration.xml";
 				InputStream in = new FileInputStream(f1);
-
-				//Overwrite the file.
-				OutputStream out = new FileOutputStream(f2);
-
+				OutputStream out = AppStorage.openOutputStream(destPath, false);
 				byte[] buf = new byte[1024];
 				int len;
-				while ((len = in.read(buf)) > 0){
+				while ((len = in.read(buf)) > 0) {
 					out.write(buf, 0, len);
 				}
 				in.close();
 				out.close();
 				q.Message("Config File stored.", 10);
 			}
-		}
-		catch (Exception e) {
+		} catch (Exception e) {
 			q.Message("problem writing the config file", 10);
 		}
 	}
@@ -1508,19 +1461,14 @@ static  public void parsenmeadata(String nmeadata){
 
 
 	static void log (String logtext) {
-		//           File consolelog = new File (HomePath + Dirprefix + "logfile");
-		try{
-			// Create file
-			FileWriter logstream = new FileWriter(HomePath + Dirprefix + "logfile", true);
-			BufferedWriter out = new BufferedWriter(logstream);
-
+		try {
+			String logPath = HomePath + Dirprefix + "logfile";
+			BufferedWriter out = new BufferedWriter(
+					new OutputStreamWriter(AppStorage.openOutputStream(logPath, true)));
 			out.write(myTime() + " " + logtext + "\n");
-			//Close the output stream
 			out.close();
-
-		}catch (Exception e){//Catch exception if any
-			//              System.err.println("LogError: " + e.getMessage());
-			loggingclass.writelog("LogError " + e.getMessage() , null, true);
+		} catch (Exception e) {
+			loggingclass.writelog("LogError " + e.getMessage(), null, true);
 		}
 		Processor.PostToTerminal(myTime() + " " + logtext + "\n");
 	}

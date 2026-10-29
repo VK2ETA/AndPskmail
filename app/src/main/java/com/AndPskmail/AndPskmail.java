@@ -904,15 +904,16 @@ public class AndPskmail extends AppCompatActivity {
 
     public static boolean readContactsPermit = false;
     public static boolean fineLocationPermit = false;
-    public static boolean writeExtStoragePermit = false;
     public static boolean recordAudioPermit = false;
     public static boolean readPhoneStatePermit = false;
+
+    // Request code for the SAF folder picker
+    private static final int REQUEST_SAF_ROOT = 15557;
 
     private final int REQUEST_PERMISSIONS = 15556;
     public final String[] permissionList = {
             Manifest.permission.READ_CONTACTS,
             Manifest.permission.ACCESS_FINE_LOCATION,
-            Manifest.permission.WRITE_EXTERNAL_STORAGE,
             Manifest.permission.RECORD_AUDIO,
             Manifest.permission.READ_PHONE_STATE};
 
@@ -921,14 +922,13 @@ public class AndPskmail extends AppCompatActivity {
         AlertDialog.Builder myAlertDialog = new AlertDialog.Builder(AndPskmail.this);
         myAlertDialog.setMessage("You are about to be presented with a series of permission requests." +
                 "\nAll but the \"Read Contacts\" are mandatory to make this app work as intended." +
-                "\nIf you do not allow any of the permissions 2. to 5. the app cannot run and will exit." +
+                "\nIf you do not allow any of the permissions 2. to 4. the app cannot run and will exit." +
                 "\n\nExplanations for the permissions: " +
                 "\n1. Read Contacts allows the app to access your contacts email addresses when creating a new email (optional)" +
-                "\n2. Access Fine Location: The GPS position and data is used for position reporting and for reading GPs time when " +
+                "\n2. Access Fine Location: The GPS position and data is used for position reporting and for reading GPS time when " +
                 "there is no cellular reception." +
-                "\n3. Write External Storage: access to the app's directory on the SD card (internal or external)" +
-                "\n4. Record Audio: audio input for the modem" +
-                "\n5. Read Phone State: to disconnect the Bluetooth interface when receiving a phone call. Amateur regulations generally " +
+                "\n3. Record Audio: audio input for the modem" +
+                "\n4. Read Phone State: to disconnect the Bluetooth interface when receiving a phone call. Amateur regulations generally " +
                 "forbid connecting a person to the telephone network or to do so without a warning." +
                 "\n\nIf you have previously denied some critical permissions, you will have to go back to the Device's Settings/Apps and re-allow the missing permission."
         );
@@ -1026,6 +1026,22 @@ public class AndPskmail extends AppCompatActivity {
 
         // Get a static copy of the activity instance
         this.myInstance = this;
+
+        // Initialise SAF storage (must happen before any file I/O).
+        AppStorage.init(this);
+
+        // If no valid SAF folder permission is held, launch the system folder
+        // picker before doing anything else.  The Intent must carry
+        // FLAG_GRANT_PERSISTABLE_URI_PERMISSION so the system issues a
+        // persistable token; without it takePersistableUriPermission() throws.
+        if (!AppStorage.hasValidPermission()) {
+            Intent pickerIntent = new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);
+            pickerIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION
+                    | Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                    | Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
+            startActivityForResult(pickerIntent, REQUEST_SAF_ROOT);
+            return; // startup continues in onActivityResult after user picks
+        }
 
         //Request all permissions up-front and be done with it.
         //If the app can't perform properly with what is requested then
@@ -1637,7 +1653,28 @@ public class AndPskmail extends AppCompatActivity {
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
+        // SAF folder picker result — handle before anything else.
+        if (requestCode == REQUEST_SAF_ROOT) {
+            if (resultCode == RESULT_OK && data != null) {
+                Uri treeUri = data.getData();
+                AppStorage.persistRootUri(treeUri);
+                // Now that we have a valid SAF root, continue normal startup.
+                havePassedAllPermissionsTest = allPermissionsOk();
+                if (havePassedAllPermissionsTest) {
+                    performOnCreate();
+                } else {
+                    requestAllCriticalPermissions();
+                }
+            } else {
+                // User cancelled — the app cannot work without a storage folder.
+                middleToastText("A storage folder must be selected. The app will exit.");
+                finish();
+                android.os.Process.killProcess(android.os.Process.myPid());
+            }
+            return;
+        }
         if (resultCode == RESULT_OK && data != null) {
+
             switch (requestCode) {
                 case CONTACT_PICKER_RESULT:
                     Cursor cursor = null;
