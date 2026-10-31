@@ -30,7 +30,6 @@ import java.util.Random;
 import android.app.NotificationManager;
 import android.app.Service;
 import android.content.Intent;
-import android.os.Environment;
 import android.os.IBinder;
 
 
@@ -62,7 +61,7 @@ public class Processor extends Service {
 	static String pendingstr = "";
 	static String Pendingdir = "";
 	static String Outpendingdir = "";
-	static String Transactions = "";
+	static String TransactionsFile = "";
 	static boolean compressedmail = false;
 	static boolean Bulletinmode = false;
 	static boolean IACmode = false;
@@ -1036,7 +1035,7 @@ static String[] AltModes = {"       ","THOR8","MFSK16","THOR22",
 			pending       = new File(pendingstr);   // kept for length() calls in Session
 			Pendingdir    = pendingstr;
 			Outpendingdir = HomePath + Dirprefix + "Outpending/";
-			Transactions  = HomePath + Dirprefix + "Transactions";
+			TransactionsFile = HomePath + Dirprefix + "Transactions";
 
 			// Ensure the bulletins file exists.
 			String bulletinsPath = HomePath + Dirprefix + "Downloads/bulletins";

@@ -24,12 +24,14 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileFilter;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.lang.reflect.Field;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
 import java.util.ArrayList;
 import java.util.Random;
 import java.util.regex.Matcher;
@@ -81,7 +83,6 @@ import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.View.OnClickListener;
-import android.view.ViewConfiguration;
 import android.view.ViewGroup;
 import android.view.Window;
 import android.view.WindowManager;
@@ -138,7 +139,6 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.TaskStackBuilder;
 import androidx.core.content.ContextCompat;
-import androidx.core.view.WindowCompat;
 
 import com.hoho.android.usbserial.driver.UsbSerialDriver;
 import com.hoho.android.usbserial.driver.UsbSerialPort;
@@ -3734,7 +3734,7 @@ public class AndPskmail extends AppCompatActivity {
                 TextView NewToField = (TextView) findViewById(R.id.emailaddress);
                 TextView NewSubjectField = (TextView) findViewById(R.id.emailsubject);
                 TextView NewTxtArea = (TextView) findViewById(R.id.emailbody);
-                FileWriter out = null;
+                //FileWriter out = null;
                 // Hide the keyboard since we handle it manually
                 InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
                 imm.hideSoftInputFromWindow(NewTxtArea.getWindowToken(), 0);
@@ -3766,7 +3766,7 @@ public class AndPskmail extends AppCompatActivity {
 					 * ex.getMessage(), null, true);
 					 */
                     NewMailText += ".\n.\n";
-
+/*
                     File sent = new File(Processor.HomePath + Processor.Dirprefix + "Sentmail");
                     out = new FileWriter(sent, true);
                     out.write("\nSent at: " + Processor.myTime());
@@ -3782,6 +3782,24 @@ public class AndPskmail extends AppCompatActivity {
                     out = new FileWriter(outFile);
                     out.write(NewMailText);
                     out.close();
+*/
+
+                    String sentPath = Processor.HomePath + Processor.Dirprefix + "Sentmail";
+                    try (OutputStream os = AppStorage.openOutputStream(sentPath, true);
+                         OutputStreamWriter out = new OutputStreamWriter(os)) {
+                        out.write("\nSent at: " + Processor.myTime());
+                        out.write(NewMailText);
+                    }
+
+                    Random r = new Random();
+                    String token = Long.toString(Math.abs(r.nextLong()), 12);
+                    token = "tmp" + token;
+                    String outFilePath = Processor.HomePath + Processor.Dirprefix + "Outbox" + Processor.Separator + token;
+                    try (OutputStream os = AppStorage.openOutputStream(outFilePath);
+                         OutputStreamWriter out = new OutputStreamWriter(os)) {
+                        out.write(NewMailText);
+                    }
+
 
                     // this.setVisible(false);
                     displayMail(NORMAL, lastEmailScreen);
@@ -4318,11 +4336,11 @@ public class AndPskmail extends AppCompatActivity {
 
                             String fname = "mail";
                             File testTransactions = new File(
-                                    Processor.Transactions);
+                                    Processor.TransactionsFile);
                             if (testTransactions.exists()) {
 
                                 FileReader trf = new FileReader(
-                                        Processor.Transactions);
+                                        Processor.TransactionsFile);
                                 BufferedReader bf = new BufferedReader(trf);
                                 String s = "";
 
@@ -4535,16 +4553,20 @@ public class AndPskmail extends AppCompatActivity {
             }
 
         } catch (Exception e) {
-            loggingclass.writelog("Error when showing mail headers.", e, true);
+            loggingclass.writelog("Error when showing web pages.", e, true);
         }
     }
 
     private void LoadHeaders() {
         try {
             // Open the file
-            FileReader frs = new FileReader(Processor.HomePath
+            //SAF Replacement
+            // FileReader frs = new FileReader(Processor.HomePath
+            //        + Processor.Dirprefix + "headers");
+            //BufferedReader br = new BufferedReader(frs);
+            InputStream is = AppStorage.openInputStream(Processor.HomePath
                     + Processor.Dirprefix + "headers");
-            BufferedReader br = new BufferedReader(frs);
+            BufferedReader br = new BufferedReader(new InputStreamReader(is));
             String s;
             MailArrayAdapter.clear();
             while ((s = br.readLine()) != null) {
@@ -4570,7 +4592,8 @@ public class AndPskmail extends AppCompatActivity {
                             + "  " + mystrarr[2] + "  " + mystrarr[3]);
                 }
             }
-            frs.close();
+            br.close();
+            is.close();
         } catch (Exception e) {
             loggingclass.writelog("Error when showing mail headers.", e, true);
         }
@@ -4646,17 +4669,25 @@ public class AndPskmail extends AppCompatActivity {
     private void LoadSentMail() {
         try {
             //Check is file is present. If not, create a blank one
-            File sentItemsFile = new File(Processor.HomePath
-                    + Processor.Dirprefix + "sentmail");
-            if (!sentItemsFile.exists()) {
+//            File sentItemsFile = new File(Processor.HomePath
+//                    + Processor.Dirprefix + "Sentmail");
+//            if (!sentItemsFile.exists()) {
                 // File did not exist, create it
-                sentItemsFile.createNewFile();
+//                sentItemsFile.createNewFile();
+//            }
+            String filePath = Processor.HomePath
+                    + Processor.Dirprefix + "Sentmail";
+            if (!AppStorage.exists(filePath)) {
+                AppStorage.createNewFile(filePath);
             }
 
             // Open the file
-            FileReader frs = new FileReader(Processor.HomePath
-                    + Processor.Dirprefix + "sentmail");
-            BufferedReader br = new BufferedReader(frs);
+            //FileReader frs = new FileReader(Processor.HomePath
+            //        + Processor.Dirprefix + "Sentmail");
+            //BufferedReader br = new BufferedReader(frs);
+            InputStream is = AppStorage.openInputStream(Processor.HomePath
+                    + Processor.Dirprefix + "Sentmail");
+            BufferedReader br = new BufferedReader(new InputStreamReader(is));
             String s;
             MailArrayAdapter.clear();
             String thisMail = "";
@@ -4687,7 +4718,8 @@ public class AndPskmail extends AppCompatActivity {
             }
             // Advise user which screen we are in
             topToastText("Mail SENT Items Screen");
-            frs.close();
+            br.close();
+            is.close();
         } catch (Exception e) {
             loggingclass.writelog("Error when showing Sent Mail.", e, true);
         }
@@ -4790,10 +4822,13 @@ public class AndPskmail extends AppCompatActivity {
 
     // Delete pending uploads (Outpending directory)
     private void ClearUploads() {
-        FileReader tin = null;
-        File uplds = new File(Processor.Transactions);
-        if (uplds.exists()) {
-            uplds.delete();
+        //FileReader tin = null;
+        //File uplds = new File(Processor.Transactions);
+        //if (uplds.exists()) {
+        //    uplds.delete();
+        //}
+        if (AppStorage.exists(Processor.TransactionsFile)) {
+            AppStorage.delete(Processor.TransactionsFile);
         }
         String fileName = Processor.Outpendingdir;
         // A File object to represent the filename
@@ -4837,37 +4872,23 @@ public class AndPskmail extends AppCompatActivity {
 
     // List all pending transcations in terminal
     public static void ListPendingTransactions() {
-        File tr = new File(Processor.Transactions);
-        FileReader fr1 = null;
+    //    File tr = new File(Processor.Transactions);
+    //    FileReader fr1 = null;
 
-        if (tr.exists()) {
+        if (AppStorage.exists(Processor.TransactionsFile)) {
             Processor.PostToTerminal("\nPending uploads:\n");
-            try {
-                fr1 = new FileReader(tr);
-            } catch (FileNotFoundException ex) {
-                // Logger.getLogger(mainpskmailui.class.getName()).log(Level.SEVERE,
-                // null, ex);
-            }
-
-            BufferedReader br = new BufferedReader(fr1);
-            String brl = "";
-            try {
+            try (InputStream is = AppStorage.openInputStream(Processor.TransactionsFile);
+                 BufferedReader br = new BufferedReader(new InputStreamReader(is))) {
+                String brl = "";
                 while ((brl = br.readLine()) != null) {
                     String[] ss = brl.split(":");
                     if (ss[4].equals("u")) {
-                        Processor.PostToTerminal(ss[2] + ":" + ss[5] + ":"
-                                + ss[6] + "\n");
+                        Processor.PostToTerminal(ss[2] + ":" + ss[5] + ":" + ss[6] + "\n");
                     }
                 }
+                // No need to call br.close() here; Java handles it automatically!
             } catch (IOException ex) {
-                // Logger.getLogger(mainpskmailui.class.getName()).log(Level.SEVERE,
-                // null, ex);
-            }
-            try {
-                br.close();
-            } catch (IOException ex) {
-                // Logger.getLogger(mainpskmailui.class.getName()).log(Level.SEVERE,
-                // null, ex);
+                // Handle exception
             }
         }
 
