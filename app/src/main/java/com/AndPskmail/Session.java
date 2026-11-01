@@ -1341,7 +1341,7 @@ public class Session {
 						Processor.TX_Text += "~FA:" + Transaction + "\n";
 						Processor.Progress = 0;
 					} catch (Exception exc) {
-						loggingclass.writelog("Error when trying to decode the downoad file.", exc, true);
+						loggingclass.writelog("Error when trying to decode the download file.", exc, true);
 					} catch (NoClassDefFoundError exp) {
 						a.Message("problem decoding B64 file", 10);
 					}
