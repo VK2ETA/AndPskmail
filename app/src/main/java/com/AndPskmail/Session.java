@@ -26,6 +26,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
+import java.nio.charset.StandardCharsets;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
@@ -230,7 +231,7 @@ public class Session {
 		int endblock;
 		lastblock = (tx_lastsent.charAt(0) - 32);
 
-		endblock = (lastgoodblock_received + 64) % 64;               ;
+		endblock = (lastgoodblock_received + 64) % 64;
 
 		int i = 0;
 		int index = 0;
@@ -972,27 +973,28 @@ public class Session {
 
 			if (ofrm2.group(5).equals("u")) {  
 				// get the file ?
-				File pending = new File (Processor.HomePath + Processor.Dirprefix + "Pending" + Processor.Separator + ofrm2.group(4));
+				String pendingPath = Processor.HomePath + Processor.Dirprefix + "Pending" + Processor.Separator + ofrm2.group(4);
 				long x = 0;
-				if (pending.exists()) {
-					x = pending.length();
+				if (AppStorage.exists(pendingPath)) {
+					InputStream is = AppStorage.openInputStream(pendingPath);
+					BufferedReader br = new BufferedReader(new InputStreamReader(is));
+					while ((br.read()) != -1) {
+						x++; //Count the number of bytes
+					}
+					br.close();
+					is.close();
 				}
-
-
 				String myresume = AndPskmail.myconfig.getPreference("RESUME", "Accept");
-
 				if (myresume.equals("Accept")) {
 					Processor.TX_Text += "~FY:" + ofrm2.group(4) + ":" + Long.toString(x) + "\n";
 				} else if (myresume.equals("Reject")){
 					Processor.TX_Text += "~FN:" + ofrm2.group(4) +  "\n";
 				} else {
 					Processor.TX_Text += "~FA:" + ofrm2.group(4) + "\n";
-					if (pending.exists()) {
-						pending.delete();
+					if (AppStorage.exists(pendingPath)) {
+						AppStorage.delete(pendingPath);
 					}
-
 				}
-
 			}
 		}
 
@@ -1006,66 +1008,58 @@ public class Session {
 			String startingbyte = yfrm.group(2);
 			//                     System.out.println(partialfile);
 			int start = Integer.parseInt(startingbyte);
-			File penf = new File(Processor.Pendingdir + partialfile);
-			File foutpending = new File(Processor.Outpendingdir + partialfile);
+			String pendingFilePath = Processor.Pendingdir + partialfile;
+			String outpendingPath = Processor.Outpendingdir + partialfile;
 			String filename = "";
-
-			if (penf.exists()) {
-
-				int i = 0;
+			if (AppStorage.exists(pendingFilePath)) {
 				try {
-					FileInputStream fis = new FileInputStream(penf);
-					char current;
-					String callsign = AndPskmail.myconfig.getPreference("CALL");
-					callsign = callsign.trim();
-//					String servercall = AndPskmail.myconfig.getPreference("SERVER");
+					InputStream fis = AppStorage.openInputStream(pendingFilePath);
+					String callsign = AndPskmail.myconfig.getPreference("CALL").trim();
 					String servercall = AndPskmail.serverToCall;
 					servercall = servercall.trim();
-					long flen = 0;
-					flen = penf.length() - start;
-
-					Processor.TX_Text += ">FM:" + callsign + ":" + servercall + ":" + partialfile + ":s: :" + Long.toString(flen) +  "\n";
-
-					while (fis.available() > 0) {
-						current = (char) fis.read();
-						i++;
-
-						if (i > start) {
-							Processor.TX_Text += current;
+					InputStreamReader isr = new InputStreamReader(fis, StandardCharsets.US_ASCII);
+					StringBuilder sb = new StringBuilder();
+					char[] buffer = new char[1024]; //Read in fast 1KB chunks
+					int charsRead;
+					int i = 0;
+					while ((charsRead = isr.read(buffer)) != -1) {
+						for (int idx = 0; idx < charsRead; idx++) {
+							char current = buffer[idx];
+							i++;
+							//Only add characters past the start value
+							if (i > start) {
+								sb.append(current);
+							}
 						}
 					}
-
+					//flen = penf.length() - start;
+					int flen = i - start;
+					isr.close();
+					Processor.TX_Text += ">FM:" + callsign + ":" + servercall + ":" + partialfile + ":s: :" + Long.toString(flen) +  "\n" + sb.toString();
 					Session.DataSize = Processor.TX_Text.length();
-
 					fis.close();
-
 				} catch (IOException e) {
-					//                                                System.out.println("IO error on pending file");
+					loggingclass.writelog("Error when trying to respond to an ~FY: command.", e, true);
 				}
-			} else if (foutpending.exists()){
-
-				int i = 0;
+			} else if (AppStorage.exists(outpendingPath)){
 				try {
-					FileInputStream fis = new FileInputStream(foutpending);
-					char current;
+					//FileInputStream fis = new FileInputStream(outpendingPath);
+					InputStream fis = AppStorage.openInputStream(outpendingPath);
 					String callsign = AndPskmail.myconfig.getPreference("CALL","NOCAL");
 					callsign = callsign.trim();
 					String servercall = AndPskmail.myconfig.getPreference("SERVER","NOCAL");
 					servercall = servercall.trim();
-
-
-					File ft = new File(Processor.TransactionsFile);
+					//File ft = new File(Processor.TransactionsFile);
 					String[] ss = null;
-					if (ft.exists()){
+					if (AppStorage.exists(Processor.TransactionsFile)){
 						//                                    System.out.println("Transactons exists");
-						FileReader fr = new FileReader(Processor.TransactionsFile);
-
-						BufferedReader br = new BufferedReader(fr);
+						//FileReader fr = new FileReader(Processor.TransactionsFile);
+						InputStream fris = AppStorage.openInputStream(Processor.TransactionsFile);
+						//BufferedReader br = new BufferedReader(fr);
+						BufferedReader br = new BufferedReader(new InputStreamReader(fris));
 						String s;
-
 						while((s = br.readLine()) != null) {
 							//                                   System.out.println("s=:" + s);
-
 							ss = s.split(":") ;
 							//                                  System.out.println(ss[5]);
 							if (s.contains(partialfile)) {
@@ -1073,36 +1067,32 @@ public class Session {
 								filename = ss[5];
 							}
 						}
-						fr.close();
+						br.close();
 					}
-
-					long flen = 0;
-					flen = foutpending.length() - start;
-
-
-					Processor.TX_Text += ">FM:" + callsign + ":" + servercall + ":" + partialfile + ":u:" + filename + ":" + Long.toString(flen) +  "\n";
-
-					while (fis.available() > 0) {
-						current = (char) fis.read();
-						i++;
-
-						if (i > start) {
-							Processor.TX_Text += current;
+					//Send remaining data
+					InputStreamReader isr = new InputStreamReader(fis, StandardCharsets.US_ASCII); //Base64 characters only
+					StringBuilder sb = new StringBuilder();
+					char[] buffer = new char[1024]; //Read in fast 1KB chunks
+					int charsRead;
+					int i = 0;
+					while ((charsRead = isr.read(buffer)) != -1) {
+						for (int idx = 0; idx < charsRead; idx++) {
+							char current = buffer[idx];
+							i++;
+							//Only add characters past the start value
+							if (i > start) {
+								sb.append(current);
+							}
 						}
 					}
-
-					fis.close();
-
-					Processor.TX_Text += "\n-end-\n";
-
+					int flen = i - start;
+					isr.close();
+					Processor.TX_Text += ">FM:" + callsign + ":" + servercall + ":" + partialfile + ":u:" + filename + ":" + Long.toString(flen) +  "\n" + sb.toString() + "\n-end-\n";
 					Session.DataSize = Integer.parseInt(ss[6]);
-
 				} catch (IOException e) {
-					//                                                System.out.println("IO error on pending file");
+					loggingclass.writelog("Error when trying to respond to an ~FY: command when an outpending file exists.", e, true);
 				}
-
 			}
-
 			Processor.log("Sending file: " + filename);
 		}
 
@@ -1110,33 +1100,35 @@ public class Session {
 		Pattern afr = Pattern.compile("~FA:([A-Za-z0-9]+)");
 		Matcher afrm = afr.matcher(str);
 		if (afrm.lookingAt()) {
-
 			String deletefl = afrm.group(1);
 			str = "";
-
 			try {
-				File df = new File(Processor.HomePath + Processor.Dirprefix + "Outbox" + Processor.Separator + deletefl);
-				if (df.exists()) {
-					df.delete();
+				String dfPath = Processor.HomePath + Processor.Dirprefix + "Outbox" + Processor.Separator + deletefl;
+				if (AppStorage.exists(dfPath)) {
+					AppStorage.delete(dfPath);
 					Processor.log ("Mail sent to Server...");
 				}
-				File outpenf = new File(Processor.Outpendingdir + deletefl);
-				if (outpenf.exists()) {
-					outpenf.delete();
+				//File outpenf = new File(Processor.Outpendingdir + deletefl);
+				String outpenPath = Processor.Outpendingdir + deletefl;
+				if (AppStorage.exists(outpenPath)) {
+					AppStorage.delete(outpenPath);
 					Processor.PostToTerminal(Processor.myTime() + " File stored...\n");
 					Processor.FilesTextArea += " File stored...\n";
 				}
 				File penf = new File(Processor.Pendingdir + deletefl);
-				if (penf.exists()) {
-					penf.delete();
+				String penPath = Processor.Pendingdir + deletefl;
+				if (AppStorage.exists(penPath)) {
+					AppStorage.delete(penPath);
 					//                                                Processor.PostToTerminal("Mail sent on server...\n");
 					//                                                Processor.FilesTextArea += "Mail sent on server...\n";
 				}
 
 				if (TransactionsExists()) {
-					FileReader trf = new FileReader (Processor.TransactionsFile);
-					BufferedReader tr = new BufferedReader(trf);
-
+					//FileReader trf = new FileReader (Processor.TransactionsFile);
+					InputStream fis = AppStorage.openInputStream(Processor.TransactionsFile);
+					//BufferedReader tr = new BufferedReader(fis);
+					BufferedReader tr = new BufferedReader(new InputStreamReader(fis));
+					//Read transaction file, max 20 entries
 					String sta[] = new String[20];
 					String st;
 					int st1 = 0;
@@ -1145,35 +1137,32 @@ public class Session {
 							sta[st1] = st;
 							st1++;
 						}
-
 					}
 					tr.close();
-
-
-					File trw = new File(Processor.TransactionsFile);
-					if (trw.exists()){
-						trw.delete();
+					//Re-create the file without deleted transaction
+					//File trw = new File(Processor.TransactionsFile);
+					if (AppStorage.exists(Processor.TransactionsFile)){
+						AppStorage.delete(Processor.TransactionsFile);
 					}
 					try {
 						if (sta[0] != null) {
-							FileWriter trwo = new FileWriter(Processor.TransactionsFile, true);
+							//FileWriter trwo = new FileWriter(Processor.TransactionsFile, true);
+							OutputStream trwo = AppStorage.openOutputStream(Processor.TransactionsFile, true);
+							OutputStreamWriter trwosw = new OutputStreamWriter(trwo);
 							int k = 0;
-
 							while (k <= st1) {
 								if (!sta[k].contains(deletefl)){
-									trwo.write(sta[k]);
+									trwosw.write(sta[k]);
 									k++;
 								}
 							}
-							trwo.close();
+							trwosw.close();
 						}
 					}
 					catch (NullPointerException npe) {
 						//                                 System.out.println("nullpointerproblem:" + npe);
 					}
-
 				}
-
 				// reset progress bar
 				Session.DataSize = 0;
 				Session.DataReceived = 0;
@@ -1185,7 +1174,6 @@ public class Session {
 			catch (IOException i){
 				//                                            System.out.println("IO problem:" + i);
 			}
-
 		}
 
 
@@ -1197,9 +1185,15 @@ public class Session {
 				MsgDownload = true;
 				Firstline = true;
 				try{
-					this. tmpmessage = new FileWriter(Processor.HomePath + Processor.Dirprefix + "tmpmessage", true);
-				}
-				catch (Exception e){
+					//this.tmpmessage = new FileWriter(Processor.HomePath + Processor.Dirprefix + "tmpmessage", true);
+					//Added deletion of file first as we open in append mode
+					String tmpmessagePath = Processor.HomePath + Processor.Dirprefix + "tmpmessage";
+					if (AppStorage.exists(tmpmessagePath)) {
+						AppStorage.delete(tmpmessagePath);
+					}
+					OutputStream os = AppStorage.openOutputStream(tmpmessagePath, true);
+					this.tmpmessage = new OutputStreamWriter(os);
+				} catch (IOException e){
 					loggingclass.writelog("Error when trying to open the tmpmessage file.", e, true);
 				}
 				// set progress indicator here...
@@ -1218,13 +1212,19 @@ public class Session {
 				Processor.comp = true;
 				Firstline = true;
 				try{
-					File F1 = new File(Processor.HomePath + Processor.Dirprefix + "tmpmessage");  // make sure it is empty
-					F1.delete();
-					File F2 = new File(Processor.HomePath + Processor.Dirprefix + "tmpmessage.gz");  // make sure it is empty
-					F2.delete();
-					this. tmpmessage = new FileWriter(Processor.HomePath + Processor.Dirprefix + "tmpmessage", true);
-				}
-				catch (Exception e){
+					String F1Path = Processor.HomePath + Processor.Dirprefix + "tmpmessage";  // make sure it is empty
+					if (AppStorage.exists(F1Path)) {
+						AppStorage.delete(F1Path);
+					}
+					String F2Path = Processor.HomePath + Processor.Dirprefix + "tmpmessage.gz";  // make sure it is empty
+					if (AppStorage.exists(F2Path)) {
+						AppStorage.delete(F2Path);
+					}
+					//this.tmpmessage = new FileWriter(Processor.HomePath + Processor.Dirprefix + "tmpmessage", true);
+					String tempmessagePath = Processor.HomePath + Processor.Dirprefix + "tmpmessage";
+					this.tmpmessageOs = AppStorage.openOutputStream(tempmessagePath, true);
+					this.tmpmessage = new OutputStreamWriter(tmpmessageOs);
+				} catch (Exception e){
 					loggingclass.writelog("Error when trying to open one of the tmpmessage files.", e, true);
 				}
 				// set progress indicator here...
@@ -1261,15 +1261,18 @@ public class Session {
 				Processor.comp = true;
 				Firstline = true;
 				try{
-					File F1 = new File(Processor.HomePath + Processor.Dirprefix + "tmpmessage");  // make sure it is empty
-					if (F1.exists()){
-						F1.delete();
+					String F1Path = Processor.HomePath + Processor.Dirprefix + "tmpmessage";  // make sure it is empty
+					if (AppStorage.exists(F1Path)) {
+						AppStorage.delete(F1Path);
 					}
-					File F2 = new File(Processor.HomePath + Processor.Dirprefix + "tmpmessage.gz");  // make sure it is empty
-					if (F2.exists()){
-						F2.delete();
+					String F2Path = Processor.HomePath + Processor.Dirprefix + "tmpmessage.gz";  // make sure it is empty
+					if (AppStorage.exists(F2Path)) {
+						AppStorage.delete(F2Path);
 					}
-					this. tmpmessage = new FileWriter(Processor.HomePath + Processor.Dirprefix + "tmpmessage", true);
+					//this.tmpmessage = new FileWriter(Processor.HomePath + Processor.Dirprefix + "tmpmessage", true);
+					String tempmessagePath = Processor.HomePath + Processor.Dirprefix + "tmpmessage";
+					this.tmpmessageOs = AppStorage.openOutputStream(tempmessagePath, true);
+					this.tmpmessage = new OutputStreamWriter(tmpmessageOs);
 				}
 				catch (Exception e){
 					loggingclass.writelog("Error when trying to open the temp file.", e, true);
@@ -1289,8 +1292,9 @@ public class Session {
 		if (ms.lookingAt()) {
 			if (ms.group(1).equals("Message sent...")){
 				try{
-					File fd = new File(Processor.Mailoutfile);
-					fd.delete();
+					//File fd = new File(Processor.Mailoutfile);
+					//fd.delete();
+					AppStorage.delete(Processor.Mailoutfile);
 				}
 				catch (Exception e){
 					loggingclass.writelog("Error deleting mail file.", e, true);
@@ -1330,22 +1334,22 @@ public class Session {
 					try {
 						Base64.decodeFileToFile(Processor.HomePath + Processor.Dirprefix + "TempFile", Processor.HomePath + Processor.Dirprefix + "Downloads" + Processor.Separator + ThisFile);
 						Unzip.Unzip(Processor.HomePath + Processor.Dirprefix + "Downloads" + Processor.Separator + ThisFile);
-						File tmp = new File (Processor.HomePath + Processor.Dirprefix + "Pending" + Processor.Separator + Transaction);
-						if (tmp.exists()){
-							tmp.delete();
+						String transacPath = Processor.HomePath + Processor.Dirprefix + "Pending" + Processor.Separator + Transaction;
+						if (AppStorage.exists(transacPath)){
+							AppStorage.delete(transacPath);
 						}
 						Processor.TX_Text += "~FA:" + Transaction + "\n";
 						Processor.Progress = 0;
-					}
-					catch (Exception exc){
+					} catch (Exception exc) {
 						loggingclass.writelog("Error when trying to decode the downoad file.", exc, true);
-					}
-					catch (NoClassDefFoundError exp) {
+					} catch (NoClassDefFoundError exp) {
 						a.Message("problem decoding B64 file", 10);
 					}
-					File tmp = new File(Processor.HomePath + Processor.Dirprefix + "TempFile");
-					boolean success = tmp.delete();
-
+					//File tmp = new File(Processor.HomePath + Processor.Dirprefix + "TempFile");
+					String tempFilePath = Processor.HomePath + Processor.Dirprefix + "TempFile";
+					if (AppStorage.exists(tempFilePath)) {
+						AppStorage.delete(tempFilePath);
+					}
 					try {
 						if (transacFileWriter != null) {
 							Processor.sm.transacFileWriter.close();
@@ -1355,7 +1359,6 @@ public class Session {
 						loggingclass.writelog("Error when trying to close the pending file.", ex, true);
 					}
 					Processor.Progress = 0;
-
 					Processor.log(ThisFile + " received");
 				}
 
@@ -1959,8 +1962,8 @@ public class Session {
 	public boolean TransactionsExists() {
 		boolean result = false;
 		String Tr = Processor.HomePath + Processor.Dirprefix + "Transactions";
-		File Transactions = new File (Tr);
-		if (Transactions.exists()) {
+		//File Transactions = new File (Tr);
+		if (AppStorage.exists(Tr)) {
 			result = true;
 		}
 		return result;

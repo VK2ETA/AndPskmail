@@ -1135,15 +1135,14 @@ public class Base64
         Base64.OutputStream bos = null;
         try
         {
-                bos = new Base64.OutputStream( 
-                          new java.io.FileOutputStream( filename ), Base64.DECODE );
+                bos = new Base64.OutputStream(
+                          AppStorage.openOutputStream( filename ), Base64.DECODE );
                 bos.write( dataToDecode.getBytes( PREFERRED_ENCODING ) );
                 success = true;
         }   // end try
         catch( java.io.IOException e )
         {
             success = false;
-//  System.out.println("BUMMER:" + e);
         }   // end catch: IOException
         finally
         {
@@ -1279,11 +1278,11 @@ public class Base64
         java.io.InputStream in = null;
         java.io.OutputStream out = null;
         try{
-            in  = new Base64.InputStream( 
-                      new java.io.BufferedInputStream( 
-                      new java.io.FileInputStream( infile ) ), 
+            in  = new Base64.InputStream(
+                      new java.io.BufferedInputStream(
+                      AppStorage.openInputStream( infile ) ),
                       Base64.ENCODE );
-            out = new java.io.BufferedOutputStream( new java.io.FileOutputStream( outfile ) );
+            out = new java.io.BufferedOutputStream( AppStorage.openOutputStream( outfile ) );
             byte[] buffer = new byte[65536]; // 64K
             int read = -1;
             while( ( read = in.read(buffer) ) >= 0 ){
@@ -1316,11 +1315,11 @@ public class Base64
         java.io.InputStream in = null;
         java.io.OutputStream out = null;
         try{
-            in  = new Base64.InputStream( 
-                      new java.io.BufferedInputStream( 
-                      new java.io.FileInputStream( infile ) ), 
+            in  = new Base64.InputStream(
+                      new java.io.BufferedInputStream(
+                      AppStorage.openInputStream( infile ) ),
                       Base64.DECODE );
-            out = new java.io.BufferedOutputStream( new java.io.FileOutputStream( outfile ) );
+            out = new java.io.BufferedOutputStream( AppStorage.openOutputStream( outfile ) );
             byte[] buffer = new byte[65536]; // 64K
             int read = -1;
             while( ( read = in.read(buffer) ) >= 0 ){
