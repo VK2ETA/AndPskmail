@@ -396,6 +396,12 @@ public class AppStorage {
         return os;
     }
 
+    //Replaces file.length()
+    public static long fileLength(Context ctx, String absolutePath) {
+        DocumentFile df = getDocumentFile(ctx, absolutePath);
+        return df != null ? df.length() : 0L;
+    }
+
     // --- Infers MIME type from file extension (used by createNewFile) ---
     private static String getMimeType(String fileName) {
         int dot = fileName.lastIndexOf('.');
@@ -450,5 +456,7 @@ public class AppStorage {
     public static OutputStream openOutputStream(String path, boolean append) throws IOException {
         return openOutputStream(appCtx(), path, append);
     }
+
+    public static long fileLength(String path) { return fileLength(appCtx(), path); }
 
 }

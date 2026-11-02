@@ -16,10 +16,11 @@ import java.util.zip.*;
 public class Unzip {
 
     public static String Unzip(String inFilePath) throws Exception {
-        GZIPInputStream gzipInputStream = new GZIPInputStream(new FileInputStream(inFilePath));
+        InputStream fileIn = AppStorage.openInputStream(inFilePath);
+        GZIPInputStream gzipInputStream = new GZIPInputStream(fileIn);
 
         String outFilePath = inFilePath.replace(".gz", "");
-        OutputStream out = new FileOutputStream(outFilePath);
+        OutputStream out = AppStorage.openOutputStream(outFilePath);
 
         byte[] buf = new byte[1024];
         int len;
@@ -29,7 +30,7 @@ public class Unzip {
         gzipInputStream.close();
         out.close();
 
-        new File(inFilePath).delete();
+        AppStorage.delete(inFilePath);
 
         return outFilePath;
     }

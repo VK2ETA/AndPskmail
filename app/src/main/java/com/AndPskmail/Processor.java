@@ -1030,6 +1030,7 @@ static String[] AltModes = {"       ","THOR8","MFSK16","THOR22",
 			AppStorage.mkdirs(HomePath + Dirprefix + "Pending/");
 			AppStorage.mkdirs(HomePath + Dirprefix + "Outpending/");
 			AppStorage.mkdirs(HomePath + Dirprefix + "Downloads/");
+			AppStorage.mkdirs(HomePath + Dirprefix + "Files/");
 
 			pendingstr    = HomePath + Dirprefix + "Pending/";
 			pending       = new File(pendingstr);   // kept for length() calls in Session

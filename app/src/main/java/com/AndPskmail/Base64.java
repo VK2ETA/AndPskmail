@@ -1170,26 +1170,27 @@ public class Base64
         Base64.InputStream bis = null;
         try
         {
-            // Set up some useful variables
-            java.io.File file = new java.io.File( filename );
+            // Set up some useful variables using SAF DocumentFile for file length
+            androidx.documentfile.provider.DocumentFile docFile =
+                    AppStorage.getDocumentFile( filename );
             byte[] buffer = null;
             int length   = 0;
             int numBytes = 0;
             
             // Check for size of file
-            if( file.length() > Integer.MAX_VALUE )
+            long fileLength = ( docFile != null ) ? docFile.length() : 0;
+            if( fileLength > Integer.MAX_VALUE )
             {
-//                System.err.println( "File is too big for this convenience method (" + file.length() + " bytes)." );
-    			loggingclass.writelog("File is too big for this convenience method (" + file.length() + " bytes)." , null, true);
+                loggingclass.writelog("File is too big for this convenience method (" + fileLength + " bytes)." , null, true);
                 return null;
             }   // end if: file too big for int index
-            buffer = new byte[ (int)file.length() ];
-            
+            buffer = new byte[ (int) fileLength ];
+
             // Open a stream
-            bis = new Base64.InputStream( 
-                      new java.io.BufferedInputStream( 
-                      new java.io.FileInputStream( file ) ), Base64.DECODE );
-            
+            bis = new Base64.InputStream(
+                      new java.io.BufferedInputStream(
+                      AppStorage.openInputStream( filename ) ), Base64.DECODE );
+
             // Read until done
             while( ( numBytes = bis.read( buffer, length, 4096 ) ) >= 0 )
                 length += numBytes;
@@ -1201,7 +1202,6 @@ public class Base64
         }   // end try
         catch( java.io.IOException e )
         {
-//            System.err.println( "Error decoding from file " + filename );
 			loggingclass.writelog("Error decoding from file " + filename , null, true);
         }   // end catch: IOException
         finally
@@ -1229,17 +1229,19 @@ public class Base64
         Base64.InputStream bis = null;
         try
         {
-            // Set up some useful variables
-            java.io.File file = new java.io.File( filename );
-            byte[] buffer = new byte[ Math.max((int)(file.length() * 1.4),40) ]; // Need max() for math on small files (v2.2.1)
+            // Set up some useful variables using SAF DocumentFile for file length
+            androidx.documentfile.provider.DocumentFile docFile =
+                    AppStorage.getDocumentFile( filename );
+            long fileLength = ( docFile != null ) ? docFile.length() : 0;
+            byte[] buffer = new byte[ Math.max((int)(fileLength * 1.4), 40) ]; // Need max() for math on small files (v2.2.1)
             int length   = 0;
             int numBytes = 0;
             
             // Open a stream
-            bis = new Base64.InputStream( 
-                      new java.io.BufferedInputStream( 
-                      new java.io.FileInputStream( file ) ), Base64.ENCODE );
-            
+            bis = new Base64.InputStream(
+                      new java.io.BufferedInputStream(
+                      AppStorage.openInputStream( filename ) ), Base64.ENCODE );
+
             // Read until done
             while( ( numBytes = bis.read( buffer, length, 4096 ) ) >= 0 )
                 length += numBytes;
@@ -1250,8 +1252,7 @@ public class Base64
         }   // end try
         catch( java.io.IOException e )
         {
-//            System.err.println( "Error encoding from file " + filename );
-			loggingclass.writelog("Error decoding from file " + filename , null, true);
+            loggingclass.writelog("Error encoding from file " + filename , null, true);
         }   // end catch: IOException
         finally
         {

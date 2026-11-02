@@ -16,11 +16,7 @@
 package com.AndPskmail;
 
 import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.File;
 import java.io.FileNotFoundException;
-import java.io.FileReader;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -31,7 +27,6 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.io.FileInputStream;
 import java.text.DecimalFormat;
 
 /**
@@ -54,7 +49,7 @@ public class Session {
 	public boolean CwwwDownload = false;
 	public boolean FileList = false;
 	public String ThisFile = "";
-	public File transacFile = null;
+	public String transacFilePath = null;
 	public String Transaction = "";
 	public String ThisFileLength = "";
 	public boolean  MsgDownload = false;
@@ -99,9 +94,9 @@ public class Session {
 	public OutputStream transacFileWriterOs = null;
 	private OutputStreamWriter tmpmessage = null;
 	private OutputStream tmpmessageOs = null;
-	private FileWriter inbox = null;
+	private OutputStreamWriter inbox = null;
 	private arq a;
-	private BufferedWriter iacout;
+	private OutputStreamWriter iacout;
 	//VK2ETA Not now (bulletins) private fastfec f;
 
 
@@ -693,8 +688,10 @@ public class Session {
 				if (mc.group(1).equals("ZFZF")){   
 					Processor.IACmode = true;
 					Firstline = true;
-					try {                                            
-						iacout = new BufferedWriter(new FileWriter(Processor.HomePath + Processor.Dirprefix + "iactemp", true));
+					try {
+						String iacPath = Processor.HomePath + Processor.Dirprefix + "iactemp";
+						OutputStream iacOs = AppStorage.openOutputStream(iacPath, true);
+						iacout = new OutputStreamWriter(iacOs);
 						a.Message("Receiving IAC fleetcode file", 15);
 					} 
 					catch (Exception e){
@@ -786,7 +783,7 @@ public class Session {
 				}
 				try {
 					// open pending file (now called transacFileWriter) for write
-					String transacFilePath = Processor.pendingstr + Transaction;
+					this.transacFilePath = Processor.pendingstr + Transaction;
 					this.transacFileWriterOs = AppStorage.openOutputStream(transacFilePath, true);
 					this.transacFileWriter = new OutputStreamWriter(transacFileWriterOs);
 				} catch (Exception e){
@@ -831,7 +828,7 @@ public class Session {
 					loggingclass.writelog("Error when trying to open the download file.", e, true);
 				}
 				try {
-					String transacFilePath = Processor.pendingstr + Transaction;
+					this.transacFilePath = Processor.pendingstr + Transaction;
 					this.transacFileWriterOs = AppStorage.openOutputStream(transacFilePath, true);
 					this.transacFileWriter = new OutputStreamWriter(transacFileWriterOs);
 				}
@@ -874,7 +871,7 @@ public class Session {
 					loggingclass.writelog("Error when trying to open the download file.", e, true);
 				}
 				try {
-					String transacFilePath = Processor.pendingstr + Transaction;
+					this.transacFilePath = Processor.pendingstr + Transaction;
 					this.transacFileWriterOs = AppStorage.openOutputStream(transacFilePath, true);
 					this.transacFileWriter = new OutputStreamWriter(transacFileWriterOs);
 				} catch (Exception e){
@@ -921,7 +918,7 @@ public class Session {
 				br.close();
 				is.close();
 				try {
-					String transacFilePath = Processor.pendingstr + Transaction;
+					this.transacFilePath = Processor.pendingstr + Transaction;
 					this.transacFileWriterOs = AppStorage.openOutputStream(transacFilePath, true);
 					this.transacFileWriter = new OutputStreamWriter(transacFileWriterOs);
 				}
@@ -1115,7 +1112,7 @@ public class Session {
 					Processor.PostToTerminal(Processor.myTime() + " File stored...\n");
 					Processor.FilesTextArea += " File stored...\n";
 				}
-				File penf = new File(Processor.Pendingdir + deletefl);
+				//File penf = new File(Processor.Pendingdir + deletefl);
 				String penPath = Processor.Pendingdir + deletefl;
 				if (AppStorage.exists(penPath)) {
 					AppStorage.delete(penPath);
@@ -1353,7 +1350,7 @@ public class Session {
 					try {
 						if (transacFileWriter != null) {
 							Processor.sm.transacFileWriter.close();
-							Processor.sm.transacFile.delete();
+							AppStorage.delete(transacFilePath);
 						}
 					} catch (IOException ex) {
 						loggingclass.writelog("Error when trying to close the pending file.", ex, true);
@@ -1367,8 +1364,9 @@ public class Session {
 					MsgDownload = false;
 					this.tmpmessage.close();
 					// append to Inbox file
-					FileReader fr = new FileReader(Processor.HomePath + Processor.Dirprefix + "tmpmessage");
-					BufferedReader br = new BufferedReader(fr);
+					String tmpmessagePath = Processor.HomePath + Processor.Dirprefix + "tmpmessage";
+					InputStream is = AppStorage.openInputStream(tmpmessagePath);
+					BufferedReader br = new BufferedReader(new InputStreamReader(is));
 					// all local stuff
 					String s;
 					String From = null;
@@ -1430,45 +1428,8 @@ public class Session {
 									} else {
 										base64attachment = false;  
 										if (attachment.length() > 10 & attachmentFilename != null){
-											// is it a grib file?
-											if (attachmentFilename.endsWith(".grb")) {
-												// are we on linux?
-												if (Processor.Separator.equals("/")) {
-													try {
-														File f1 = new File("/opt/zyGrib/grib/");
-														// is zygrib installed?
-														if (f1.isDirectory()) {
-															attachmentFilename ="/opt/zyGrib/grib/" + attachmentFilename ;
-														} else {
-															// no, put it in the Files directory
-															File myfiles = new File ("Files");
-															if (!myfiles.isDirectory()) {
-																myfiles.mkdir();
-															}
-
-															attachmentFilename = "Files/" + attachmentFilename;
-															attachmentFilename = Processor.HomePath + Processor.Dirprefix + attachmentFilename;
-														}   
-													}
-													catch (Exception e) {
-														a.Message("IO problem", 10);
-													}
-												} 
-											} else {
-												// no grib file
-												File myfiles = new File ("Files");
-												if (!myfiles.isDirectory()) {
-													myfiles.mkdir();
-												}
-
-												attachmentFilename = "Files/" + attachmentFilename;
-												attachmentFilename = Processor.HomePath + Processor.Dirprefix + attachmentFilename;
-											}
+											attachmentFilename = Processor.HomePath + Processor.Dirprefix + "Files/" + attachmentFilename;
 											try {
-												File myfiles = new File (Processor.HomePath + Processor.Dirprefix + "Files");
-												if (!myfiles.isDirectory()) {
-													myfiles.mkdir();
-												}
 												// remove first line if "X-Attachment..."
 												String[] attlines = attachment.split("\n");
 												if (attlines[0].startsWith("X-Attachment")) {
@@ -1494,26 +1455,33 @@ public class Session {
 							}
 						}
 					} // end while
-					fr.close();
-					this.inbox = new FileWriter(Processor.HomePath + Processor.Dirprefix + "Inbox", true);
-					inbox.write("From " + From + " " + Date + "\n");
-					inbox.write("From: " + From + "\n");
-					if (Date != null)   {
-						inbox.write("Date: " +Date + "\n");
-					}
-					inbox.write("Subject: " + Sub + "\n");
-					// write message body
-					if  (outstr != null) {
-						inbox.write(outstr + "\n");
-					}
-					inbox.flush();
-					inbox.close();
-					File fl = new File(Processor.HomePath + Processor.Dirprefix + "tmpmessage");
-					if (fl.exists()) {
-						fl.delete();
-					}
+					br.close();
+					//this.inbox = new FileWriter(Processor.HomePath + Processor.Dirprefix + "Inbox", true);
+					String inboxPath = Processor.HomePath + Processor.Dirprefix + "Inbox";
+					try {
+						OutputStream osw =AppStorage.openOutputStream(inboxPath, true);
+						this.inbox = new OutputStreamWriter(osw);
 
-					a.Message("Added to mbox queue", 10);
+						inbox.write("From " + From + " " + Date + "\n");
+						inbox.write("From: " + From + "\n");
+						if (Date != null) {
+							inbox.write("Date: " + Date + "\n");
+						}
+						inbox.write("Subject: " + Sub + "\n");
+						// write message body
+						if (outstr != null) {
+							inbox.write(outstr + "\n");
+						}
+						inbox.flush();
+						inbox.close();
+						//File fl = new File(Processor.HomePath + Processor.Dirprefix + "tmpmessage");
+						if (AppStorage.exists(tmpmessagePath)) {
+							AppStorage.delete(tmpmessagePath);
+						}
+						a.Message("Added to mbox queue", 10);
+					} catch (IOException e) {
+						loggingclass.writelog("Error when trying to write to inbox file.", e, true);
+					}
 				}
 
 				// compressed messages  download      - append tmpmessage to Inbox in mbox format                          
@@ -1533,8 +1501,6 @@ public class Session {
 						a.Message ("Decoding error!", 10);
 					}
 					// append to Inbox file
-					FileReader fr = new FileReader(Processor.HomePath + Processor.Dirprefix + "tmpmessage");
-					BufferedReader br = new BufferedReader(fr);
 					// all local stuff
 					String s;
 					String From = null;
@@ -1543,180 +1509,157 @@ public class Session {
 					String outstr = "";
 					String attachment = "";
 					base64attachment = false;
-
-					// make some room on the screen...
-					Processor.PostToTerminal("\n\n");
-					// read tmpmessage line by line
-					while((s = br.readLine()) != null) {
-						// show what we've got...
-						int maxwait = 0;
-						while (Processor.mainmutex) {
-							try {
-								Thread.sleep(5);
-								maxwait++;
-								if (maxwait > 100) {
-									break;
+					try {
+						String tmpmessagePath = Processor.HomePath + Processor.Dirprefix + "tmpmessage";
+						InputStream is = AppStorage.openInputStream(tmpmessagePath);
+						BufferedReader br = new BufferedReader(new InputStreamReader(is));
+						// make some room on the screen...
+						Processor.PostToTerminal("\n\n");
+						// read tmpmessage line by line
+						while ((s = br.readLine()) != null) {
+							// show what we've got...
+							int maxwait = 0;
+							while (Processor.mainmutex) {
+								try {
+									Thread.sleep(5);
+									maxwait++;
+									if (maxwait > 100) {
+										break;
+									}
+								} catch (InterruptedException ex) {
+									Logger.getLogger(Modem.class.getName()).log(Level.SEVERE, null, ex);
 								}
-							} catch (InterruptedException ex) {
-								Logger.getLogger(Modem.class.getName()).log(Level.SEVERE, null, ex);
 							}
-						}
-						Processor.PostToTerminal(s + "\n");
-						// compile some patterns and set up the matchers
-						Pattern pfrm = Pattern.compile("^\\s*(From:)\\s(.*)");
-						Matcher mfrm = pfrm.matcher(s);
-						Pattern pdate = Pattern.compile("^\\s*(Date:)\\s(\\w{3})\\,*\\s+(\\d+)\\s(\\w{3})\\s(\\d{4})\\s(\\d\\d:\\d\\d:\\d\\d)");
-						Matcher mdate = pdate.matcher(s);
-						Pattern pdate2 = Pattern.compile("^\\s*(Date:)\\s(\\d+)\\s+(\\w{3})\\s+(\\d{4}\\s\\d\\d:\\d\\d:\\d\\d)");
-						Matcher mdate2 = pdate2.matcher(s);                                                      
-						Pattern psub = Pattern.compile("^\\s*(Subject:)\\s(.*)");
-						Matcher msub = psub.matcher(s);
-						Pattern p64 = Pattern.compile("^\\s*(content-transfer-encoding: base64)");
-						Matcher m64 = p64.matcher(s.toLowerCase());
-						Pattern c64 = Pattern.compile("^\\s*(content-type)");
-						Matcher cc64 = c64.matcher(s.toLowerCase());
-						Pattern pnm = Pattern.compile(".*(filename=)(.*)");
-						Matcher mnm = pnm.matcher(s);
-						Pattern xui = Pattern.compile("X-UI-ATTACHMENT");
-						Matcher mxui = xui.matcher(s);
-						Pattern nmx = Pattern.compile("name=");
-						Matcher mnmx = nmx.matcher(s);
-						if (mfrm.lookingAt()) {
-							if (mfrm.group(1).equals("From:")){   
-								From = mfrm.group(2);
-							} 
-						} else if (mdate.lookingAt()){
-							if (mdate.group(1).equals("Date:")) {
-								Date = mdate.group(2) + " " + mdate.group(3) + " " + 
-										mdate.group(4) + " " + mdate.group(5) + " " +
-										mdate.group(6);
-							}
-						} else if (mdate2.lookingAt()){
-							if (mdate2.group(1).equals("Date:")) {
-								Date = mdate2.group(2) + " " + mdate2.group(3) + " " + 
-										mdate2.group(4);
-							}
-						} else if  (msub.lookingAt()){
-							if (msub.group(1).equals("Subject:")) {
-								Sub = msub.group(2);
-							}
-						} else if  (m64.lookingAt()){
-							if (m64.group(1).equals("content-transfer-encoding: base64")) {
-								// there is an attachment...
-								base64attachment = true;
-								//                                                                debug ("Attachment");
+							Processor.PostToTerminal(s + "\n");
+							// compile some patterns and set up the matchers
+							Pattern pfrm = Pattern.compile("^\\s*(From:)\\s(.*)");
+							Matcher mfrm = pfrm.matcher(s);
+							Pattern pdate = Pattern.compile("^\\s*(Date:)\\s(\\w{3})\\,*\\s+(\\d+)\\s(\\w{3})\\s(\\d{4})\\s(\\d\\d:\\d\\d:\\d\\d)");
+							Matcher mdate = pdate.matcher(s);
+							Pattern pdate2 = Pattern.compile("^\\s*(Date:)\\s(\\d+)\\s+(\\w{3})\\s+(\\d{4}\\s\\d\\d:\\d\\d:\\d\\d)");
+							Matcher mdate2 = pdate2.matcher(s);
+							Pattern psub = Pattern.compile("^\\s*(Subject:)\\s(.*)");
+							Matcher msub = psub.matcher(s);
+							Pattern p64 = Pattern.compile("^\\s*(content-transfer-encoding: base64)");
+							Matcher m64 = p64.matcher(s.toLowerCase());
+							Pattern c64 = Pattern.compile("^\\s*(content-type)");
+							Matcher cc64 = c64.matcher(s.toLowerCase());
+							Pattern pnm = Pattern.compile(".*(filename=)(.*)");
+							Matcher mnm = pnm.matcher(s);
+							Pattern xui = Pattern.compile("X-UI-ATTACHMENT");
+							Matcher mxui = xui.matcher(s);
+							Pattern nmx = Pattern.compile("name=");
+							Matcher mnmx = nmx.matcher(s);
+							if (mfrm.lookingAt()) {
+								if (mfrm.group(1).equals("From:")) {
+									From = mfrm.group(2);
+								}
+							} else if (mdate.lookingAt()) {
+								if (mdate.group(1).equals("Date:")) {
+									Date = mdate.group(2) + " " + mdate.group(3) + " " +
+											mdate.group(4) + " " + mdate.group(5) + " " +
+											mdate.group(6);
+								}
+							} else if (mdate2.lookingAt()) {
+								if (mdate2.group(1).equals("Date:")) {
+									Date = mdate2.group(2) + " " + mdate2.group(3) + " " +
+											mdate2.group(4);
+								}
+							} else if (msub.lookingAt()) {
+								if (msub.group(1).equals("Subject:")) {
+									Sub = msub.group(2);
+								}
+							} else if (m64.lookingAt()) {
+								if (m64.group(1).equals("content-transfer-encoding: base64")) {
+									// there is an attachment...
+									base64attachment = true;
+									//                                                                debug ("Attachment");
+									outstr += s + "\n";  // write to Inbox
+								}
+							} else if (cc64.lookingAt()) {
 								outstr += s + "\n";  // write to Inbox
-							}
-						} else if  (cc64.lookingAt()){
-							outstr += s + "\n";  // write to Inbox
-						} else if  (mxui.lookingAt()){
-							outstr += s + "\n";  // write to Inbox
-						} else if  (mnm.lookingAt()){
-							if (mnm.group(1).equals("filename=")) {
-								// get the file name, remove double quotes if any
-								attachmentFilename = mnm.group(2).replace("\"", "");
+							} else if (mxui.lookingAt()) {
 								outstr += s + "\n";  // write to Inbox
-							}
-						} else if (mnmx.lookingAt()) {
-							outstr += s + "\n";  // write to Inbox
-						} else {
-							if (base64attachment) {
+							} else if (mnm.lookingAt()) {
+								if (mnm.group(1).equals("filename=")) {
+									// get the file name, remove double quotes if any
+									attachmentFilename = mnm.group(2).replace("\"", "");
+									outstr += s + "\n";  // write to Inbox
+								}
+							} else if (mnmx.lookingAt()) {
 								outstr += s + "\n";  // write to Inbox
-								if (!s.isEmpty()) {
-									if (!s.startsWith("--")){
-										attachment += s + "\n";
-										//     System.out.println(s);
-									} else {
-										base64attachment = false;  
-										if (attachment.length() > 10 & attachmentFilename != null){
-											// is it a grib file?
-											if (attachmentFilename.endsWith(".grb")) {
-												// are we on linux?
-												if (Processor.Separator.equals("/")) {
-													try {
-														File f1 = new File("/opt/zyGrib/grib/");
-														// is zygrib installed?
-														if (f1.isDirectory()) {
-															attachmentFilename ="/opt/zyGrib/grib/" + attachmentFilename ;
-														} else {
-															// no, put it in the Files directory
-															File myfiles = new File ("Files");
-															if (!myfiles.isDirectory()) {
-																myfiles.mkdir();
-															}
-															attachmentFilename = "Files/" + attachmentFilename;
-															attachmentFilename = Processor.HomePath + Processor.Dirprefix + attachmentFilename;
-														}   
+							} else {
+								if (base64attachment) {
+									outstr += s + "\n";  // write to Inbox
+									if (!s.isEmpty()) {
+										if (!s.startsWith("--")) {
+											attachment += s + "\n";
+											//     System.out.println(s);
+										} else {
+											base64attachment = false;
+											if (attachment.length() > 10 & attachmentFilename != null) {
+												attachmentFilename = Processor.HomePath + Processor.Dirprefix + "Files/" + attachmentFilename;
+												try {
+													// remove first line if "X-Attachment..."
+													String[] attlines = attachment.split("\n");
+													if (attlines[0].startsWith("X-Attachment")) {
+														attachment = "";
+														for (int i = 1; i < attlines.length; i++) {
+															attachment += attlines[i] + "\n";
+														}
 													}
-													catch (Exception e) {
-														a.Message("IO problem", 10);
-													}
-												} 
-											} else {
-												// no grib file
-												File myfiles = new File ("Files");
-												if (!myfiles.isDirectory()) {
-													myfiles.mkdir();
+													//loggingclass.writelog("Compressed: >"+attachmentFilename+"< length() = " + Integer.toString(attachmentFilename.length()), null, true);
+													boolean success = Base64.decodeToFile(attachment, attachmentFilename);
+													a.Message("File stored in " + attachmentFilename, 10);
+													Processor.PostToTerminal("\n File stored in " + attachmentFilename + "\n");
+												} catch (Exception e) {
+													a.Message("Problem with decoding, " + e, 10);
 												}
-												attachmentFilename = "Files/" + attachmentFilename;
-												attachmentFilename = Processor.HomePath + Processor.Dirprefix + attachmentFilename;
-											}
-											try {
-												File myfiles = new File (Processor.HomePath + Processor.Dirprefix + "Files");
-												if (!myfiles.isDirectory()) {
-													myfiles.mkdir();
-												}
-												// remove first line if "X-Attachment..."
-												String[] attlines = attachment.split("\n");
-												if (attlines[0].startsWith("X-Attachment")) {
-													attachment = "";
-													for (int i = 1; i < attlines.length; i++) {
-														attachment += attlines[i] + "\n";
-													}
-												}
-												//loggingclass.writelog("Compressed: >"+attachmentFilename+"< length() = " + Integer.toString(attachmentFilename.length()), null, true);
-												boolean success = Base64.decodeToFile(attachment, attachmentFilename);
-												a.Message ("File stored in " + attachmentFilename, 10);
-												Processor.PostToTerminal("\n File stored in " + attachmentFilename + "\n");
-											}
-											catch (Exception e){
-												a.Message("Problem with decoding, "+ e, 10);
 											}
 										}
 									}
+								} else {
+									outstr += s + "\n";  // write to Inbox
 								}
-							} else {
-								outstr += s + "\n";  // write to Inbox
 							}
+						} // end while
+						br.close();
+					} catch (IOException e) {
+						loggingclass.writelog("Error when trying to process compressed message.", e, true);
+					}
+					String inboxPath = Processor.HomePath + Processor.Dirprefix + "Inbox";
+					try {
+						//this.inbox = new FileWriter(Processor.HomePath + Processor.Dirprefix + "Inbox", true);
+						OutputStream osw = AppStorage.openOutputStream(inboxPath, true);
+						this.inbox = new OutputStreamWriter(osw);
+						inbox.write("From " + From + " " + Date + "\n");
+						inbox.write("From: " + From + "\n");
+						if (Date != null) {
+							inbox.write("Date: " + Date + "\n");
 						}
-					} // end while
-					fr.close();
-					this.inbox = new FileWriter(Processor.HomePath + Processor.Dirprefix + "Inbox", true);
-					inbox.write("From " + From + " " + Date + "\n");
-					inbox.write("From: " + From + "\n");
-					if (Date != null)   {
-						inbox.write("Date: " +Date + "\n");
+						inbox.write("Subject: " + Sub + "\n");
+						// write message body
+						if (outstr != null) {
+							inbox.write(outstr + "\n");
+						}
+						inbox.flush();
+						inbox.close();
+						String tmpMessagePath = Processor.HomePath + Processor.Dirprefix + "tmpmessage";
+						if (AppStorage.exists(tmpMessagePath)) {
+							AppStorage.delete(tmpMessagePath);
+						}
+						String pendingPath = Processor.HomePath + Processor.Dirprefix + "Pending" + Processor.Separator + Transaction;
+						if (AppStorage.exists(pendingPath)) {
+							AppStorage.delete(pendingPath);
+						}
+						if (Processor.protocol > 0) {
+							Processor.TX_Text += "~FA:" + Transaction + "\n";
+						}
+						Processor.Progress = 0;
+						a.Message("Added to mbox queue", 10);
+					} catch (IOException e) {
+						loggingclass.writelog("Error when trying to write compressed message to inbox.", e, true);
 					}
-					inbox.write("Subject: " + Sub + "\n");
-					// write message body
-					if  (outstr != null) {
-						inbox.write(outstr + "\n");
-					}
-					inbox.flush();
-					inbox.close();
-					File fl = new File(Processor.HomePath + Processor.Dirprefix + "tmpmessage");
-					if (fl.exists()) {
-						fl.delete();
-					}
-					File pending = new File (Processor.HomePath + Processor.Dirprefix + "Pending" + Processor.Separator + Transaction);
-					if (pending.exists()) {
-						pending.delete();
-					}
-					if (Processor.protocol > 0) {
-						Processor.TX_Text += "~FA:" + Transaction + "\n";
-					}
-					Processor.Progress = 0;
-					a.Message("Added to mbox queue", 10);
 				}
 
 				// compressed web pages and script output download
@@ -1730,12 +1673,8 @@ public class Session {
 					}
 					//Decode Base64 to .bz to text
 					try {
-						try {
-							Base64.decodeFileToFile(Processor.HomePath + Processor.Dirprefix + "TempFile", Processor.HomePath + Processor.Dirprefix + "TMP.gz");
-						}
-						catch (Exception ex) {
-							loggingclass.writelog("Error when trying to B64-decode the download file.", ex, true);
-						}
+						Base64.decodeFileToFile(Processor.HomePath + Processor.Dirprefix + "TempFile",
+								Processor.HomePath + Processor.Dirprefix + "TMP.gz");
 						try {
 							Unzip.Unzip(Processor.HomePath + Processor.Dirprefix + "TMP.gz");
 						}
@@ -1744,7 +1683,8 @@ public class Session {
 						}
 						//Output the file to the terminal
 						try {
-							BufferedReader in = new BufferedReader(new FileReader(Processor.HomePath + Processor.Dirprefix + "TMP"));
+							//BufferedReader in = new BufferedReader(new FileReader(Processor.HomePath + Processor.Dirprefix + "TMP"));
+							BufferedReader in = new BufferedReader(new InputStreamReader(AppStorage.openInputStream(Processor.HomePath + Processor.Dirprefix + "TMP")));
 							String str2;
 							StringBuilder sb = new StringBuilder();
 							while ((str2 = in.readLine()) != null) {
@@ -1755,14 +1695,14 @@ public class Session {
 						} catch (IOException e) {
 							a.Message("problem decoding B64 file", 10);
 						}
-						File tmp1 = new File (Processor.HomePath + Processor.Dirprefix + "TMP");
+						String tmp1Path = Processor.HomePath + Processor.Dirprefix + "TMP";
 						//Cleanup
-						if (tmp1.exists()){
-							tmp1.delete();
+						if (AppStorage.exists(tmp1Path)){
+							AppStorage.delete(tmp1Path);
 						}
-						File tmp = new File (Processor.HomePath + Processor.Dirprefix + "Pending" + Processor.Separator + Transaction);
-						if (tmp.exists()){
-							tmp.delete();
+						String tmpPath = Processor.HomePath + Processor.Dirprefix + "Pending" + Processor.Separator + Transaction;
+						if (AppStorage.exists(tmpPath)){
+							AppStorage.delete(tmpPath);
 						}
 						//Let the other side we received the compressed data
 						if (Processor.protocol > 0){
@@ -1776,12 +1716,12 @@ public class Session {
 					catch (NoClassDefFoundError exp) {
 						a.Message("problem decoding B64 file", 10);
 					}
-					File tmp = new File(Processor.HomePath + Processor.Dirprefix + "TempFile");
-					boolean success = tmp.delete();
+					String tmpPath = Processor.HomePath + Processor.Dirprefix + "TempFile";
+					boolean success = AppStorage.delete(tmpPath);
 					try {
 						if (transacFileWriter != null) {
 							Processor.sm.transacFileWriter.close();
-							Processor.sm.transacFile.delete();
+							AppStorage.delete(transacFilePath);
 						}
 					} catch (IOException ex) {
 						loggingclass.writelog("Error when trying to close the pending file.", ex, true);
@@ -2106,51 +2046,43 @@ public class Session {
 
 	public void makeFile(String filename) {
 		String fileName = Processor.HomePath + Processor.Dirprefix + filename;
-		File fl = new File(fileName);
 		try {
-			boolean success = fl.createNewFile();
+			if (!AppStorage.exists(fileName)) {
+				boolean success = AppStorage.createNewFile(fileName);
+			}
 		}
-		catch (IOException e) {
+		catch (Exception e) {
 			loggingclass.writelog("Error creating headers file:", e, true);
 		} 
 	}
 
 	public void deleteFile(String filename){ 
 		String fileName = Processor.HomePath + Processor.Dirprefix + filename;
-		// A File object to represent the filename
-		File fl = new File(fileName);
 
 		// Make sure the file or directory exists and isn't write protected
 		try {
-			if (!fl.exists()){
+			if (!AppStorage.exists(fileName)) {
 				throw new IllegalArgumentException("Delete: Does not exist: "
 						+ fileName);
 			}
 
-
-			if (!fl.canWrite())
-				throw new IllegalArgumentException("Delete: write protected: "
-						+ fileName);
-
 			// If it is a directory, make sure it is empty
-			if (fl.isDirectory()) {
-				String[] files = fl.list();
+			if (AppStorage.isDirectory(fileName)) {
+				String[] files = AppStorage.listFiles(fileName);
 				if (files.length > 0)
 					throw new IllegalArgumentException(
 							"Delete: directory not empty: " + fileName);
 			}
 
 			// Attempt to delete it
-			boolean success = fl.delete();
+			boolean success = AppStorage.delete(fileName);
 
 			if (!success)
 				throw new IllegalArgumentException("Delete: deletion failed");       
 		}
-
 		catch (IllegalArgumentException e) {
 			loggingclass.writelog("Error deleting headers file:", e, true);
 		}
-
 	}
 	// read last header number from headers file    
 	public String getHeaderCount(String filename) {
@@ -2320,27 +2252,25 @@ public class Session {
                                                  }
 					 */
 		}
-
 		if (FileList) {
 			FileList = false;
 		}
-
 		if (FileDownload){
 			FileDownload = false;
 			Processor.comp = false;
 			try {
 				this.tempFile.close();
-				File df = new File(Processor.HomePath + Processor.Dirprefix + "TempFile");
-				if (df.exists()) {
-					boolean scs = df.delete();
+				String dfPath = Processor.HomePath + Processor.Dirprefix + "TempFile";
+				if (AppStorage.exists(dfPath)) {
+					AppStorage.delete(dfPath);
 				}
 			} catch (IOException ex) {
 				loggingclass.writelog("Error when trying to close the download file.", ex, true);
 			}
 			try {
-				File tmp = new File (Processor.HomePath + Processor.Dirprefix + "Pending" + Processor.Separator + Transaction);
-				if (tmp.exists()){
-					tmp.delete();
+				String tmpPath = Processor.HomePath + Processor.Dirprefix + "Pending" + Processor.Separator + Transaction;
+				if (AppStorage.exists(tmpPath)) {
+					AppStorage.delete(tmpPath);
 				}
 
 				Processor.TX_Text += "~FA:" + Transaction + "\n";
@@ -2351,12 +2281,12 @@ public class Session {
 			} catch (NoClassDefFoundError exp) {
 				a.Message("problem decoding B64 file", 10);
 			}
-			File tmp = new File(Processor.HomePath + Processor.Dirprefix + "TempFile");
-			boolean success = tmp.delete();
+			String tempFilePath = Processor.HomePath + Processor.Dirprefix + "TempFile";
+			AppStorage.delete(tempFilePath);
 			try {
 				if (transacFileWriter != null) {
 					Processor.sm.transacFileWriter.close();
-					Processor.sm.transacFile.delete();
+					AppStorage.delete(transacFilePath);
 				}
 			} catch (IOException ex) {
 				loggingclass.writelog("Error when trying to close the pending file.", ex, true);
@@ -2369,12 +2299,9 @@ public class Session {
 			MsgDownload = false;
 			try {
 				this.tmpmessage.close();
-				// append to Inbox file
-				FileReader fr = new FileReader("tmpmessage");
-
-				File fl = new File(Processor.HomePath + Processor.Dirprefix + "tmpmessage");
-				if (fl.exists()) {
-					fl.delete();
+				String tmpmessagePath = Processor.HomePath + Processor.Dirprefix + "tmpmessage";
+				if (AppStorage.exists(tmpmessagePath)) {
+					AppStorage.delete(tmpmessagePath);
 				}
 			} catch (IOException ex) {
 				loggingclass.writelog("Error when trying to close the tmp message file.", ex, true);
@@ -2386,15 +2313,13 @@ public class Session {
             Processor.comp = false;
             try {
                 tmpmessage.close();
-                // append to Inbox file
-                File fl = new File(Processor.HomePath + Processor.Dirprefix + "tmpmessage");
-                if (fl.exists()) {
-                    fl.delete();
+                String tmpmessagePath = Processor.HomePath + Processor.Dirprefix + "tmpmessage";
+                if (AppStorage.exists(tmpmessagePath)) {
+                    AppStorage.delete(tmpmessagePath);
                 }
-
-                File pending = new File(Processor.HomePath + Processor.Dirprefix + "Pending" + Processor.Separator + Transaction);
-                if (pending.exists()) {
-                    pending.delete();
+                String pendingPath = Processor.HomePath + Processor.Dirprefix + "Pending" + Processor.Separator + Transaction;
+                if (AppStorage.exists(pendingPath)) {
+                    AppStorage.delete(pendingPath);
                 }
             } catch (IOException ex) {
                 loggingclass.writelog("Error when trying to close the tmp message file.", ex, true);
@@ -2409,12 +2334,12 @@ public class Session {
 			} catch (IOException ex) {
 				loggingclass.writelog("Error when trying to close the download file.", ex, true);
 			}
-			File tmp = new File(Processor.HomePath + Processor.Dirprefix + "TempFile");
-			boolean success = tmp.delete();
+			String tempFilePath = Processor.HomePath + Processor.Dirprefix + "TempFile";
+			AppStorage.delete(tempFilePath);
 			try {
 				if (transacFileWriter != null) {
 					Processor.sm.transacFileWriter.close();
-					Processor.sm.transacFile.delete();
+					AppStorage.delete(transacFilePath);
 				}
 			} catch (IOException ex) {
 				loggingclass.writelog("Error when trying to close the pending file.", ex, true);
